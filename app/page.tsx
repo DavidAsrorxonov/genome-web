@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { HeroCompilerDemo } from "@/components/hero-compiler-demo";
+import { ProblemComparison } from "@/components/problem-comparison";
 
 const highlights = [
   {
@@ -277,6 +278,8 @@ export default function Home() {
           </div>
           <HeroCompilerDemo />
         </section>
+
+        <ProblemComparison />
       </main>
 
       <SiteFooter />
