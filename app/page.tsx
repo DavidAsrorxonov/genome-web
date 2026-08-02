@@ -12,6 +12,7 @@ import { HowItWorks } from "@/components/how-it-works";
 import { FrameworkShowcase } from "@/components/framework-showcase";
 import { CapabilityGrid } from "@/components/capability-grid";
 import { ReliabilitySection } from "@/components/reliability-section";
+import { FinalCta } from "@/components/final-cta";
 
 const highlights = [
   {
@@ -292,6 +293,8 @@ export default function Home() {
         <CapabilityGrid />
 
         <ReliabilitySection />
+
+        <FinalCta />
       </main>
 
       <SiteFooter />
