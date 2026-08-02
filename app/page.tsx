@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { HeroCompilerDemo } from "@/components/hero-compiler-demo";
 import { ProblemComparison } from "@/components/problem-comparison";
+import { HowItWorks } from "@/components/how-it-works";
 
 const highlights = [
   {
@@ -280,6 +281,8 @@ export default function Home() {
         </section>
 
         <ProblemComparison />
+
+        <HowItWorks />
       </main>
 
       <SiteFooter />
