@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { HeroCompilerDemo } from "@/components/hero-compiler-demo";
 
 const highlights = [
   {
@@ -272,8 +273,9 @@ export default function Home() {
               </div>
             </div>
 
-            <CompilerPreview />
+            {/* <CompilerPreview /> */}
           </div>
+          <HeroCompilerDemo />
         </section>
       </main>
 
