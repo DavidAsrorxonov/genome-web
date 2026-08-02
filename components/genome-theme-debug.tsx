@@ -46,7 +46,7 @@ export function GenomeThemeDebug() {
 
         <Button
           variant="outline"
-          onClick={() => setRadiusScale(context.radiusScale === 1 ? 1.35 : 1)}
+          onClick={() => setRadiusScale(context.radiusScale === 1 ? 4 : 1)}
         >
           Radius: {context.radiusScale}
         </Button>
