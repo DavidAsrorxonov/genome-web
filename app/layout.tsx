@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { RootProvider } from "fumadocs-ui/provider/next";
 
 import "./globals.css";
+import { GenomeProvider } from "@/components/providers/genome-provider";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -36,7 +37,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
-        <RootProvider>{children}</RootProvider>
+        <RootProvider>
+          <GenomeProvider>{children}</GenomeProvider>
+        </RootProvider>
       </body>
     </html>
   );

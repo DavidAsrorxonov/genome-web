@@ -52,6 +52,95 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * GenomeJS server-rendering fallbacks.
+ *
+ * The browser runtime overwrites these --g-* values
+ * through document.documentElement.style.
+ */
+
+:root {
+  --g-background: oklch(0.99 0.002 270);
+  --g-foreground: oklch(0.17 0.01 270);
+
+  --g-card: oklch(1 0 0);
+  --g-card-foreground: oklch(0.17 0.01 270);
+
+  --g-popover: oklch(1 0 0);
+  --g-popover-foreground: oklch(0.17 0.01 270);
+
+  --g-primary: oklch(0.57 0.24 285);
+  --g-primary-foreground: oklch(0.99 0 0);
+
+  --g-secondary: oklch(0.97 0.005 270);
+  --g-secondary-foreground: oklch(0.17 0.01 270);
+
+  --g-muted: oklch(0.97 0.005 270);
+  --g-muted-foreground: oklch(0.46 0.02 270);
+
+  --g-accent: oklch(0.94 0.04 285);
+  --g-accent-foreground: oklch(0.17 0.01 270);
+
+  --g-destructive: oklch(0.65 0.22 20);
+  --g-destructive-foreground: oklch(0.99 0 0);
+
+  --g-border: oklch(0.2 0.01 270 / 12%);
+  --g-input: oklch(0.2 0.01 270 / 12%);
+  --g-ring: oklch(0.57 0.24 285);
+
+  --g-sidebar: oklch(1 0 0);
+  --g-sidebar-foreground: oklch(0.17 0.01 270);
+  --g-sidebar-primary: oklch(0.57 0.24 285);
+  --g-sidebar-primary-foreground: oklch(0.99 0 0);
+  --g-sidebar-accent: oklch(0.94 0.04 285);
+  --g-sidebar-accent-foreground: oklch(0.17 0.01 270);
+  --g-sidebar-border: oklch(0.2 0.01 270 / 12%);
+  --g-sidebar-ring: oklch(0.57 0.24 285);
+
+  --g-radius: 0.875rem;
+  --g-section-gap: 96px;
+  --g-control-height: 2.5rem;
+}
+
+.dark {
+  --g-background: oklch(0.14 0.01 270);
+  --g-foreground: oklch(0.97 0.005 270);
+
+  --g-card: oklch(0.18 0.015 270);
+  --g-card-foreground: oklch(0.97 0.005 270);
+
+  --g-popover: oklch(0.215 0.018 270);
+  --g-popover-foreground: oklch(0.97 0.005 270);
+
+  --g-primary: oklch(0.63 0.22 285);
+  --g-primary-foreground: oklch(0.99 0 0);
+
+  --g-secondary: oklch(0.215 0.018 270);
+  --g-secondary-foreground: oklch(0.97 0.005 270);
+
+  --g-muted: oklch(0.215 0.018 270);
+  --g-muted-foreground: oklch(0.73 0.02 270);
+
+  --g-accent: oklch(0.24 0.04 285);
+  --g-accent-foreground: oklch(0.97 0.005 270);
+
+  --g-destructive: oklch(0.65 0.22 20);
+  --g-destructive-foreground: oklch(0.99 0 0);
+
+  --g-border: oklch(1 0 0 / 10%);
+  --g-input: oklch(1 0 0 / 10%);
+  --g-ring: oklch(0.63 0.22 285);
+
+  --g-sidebar: oklch(0.18 0.015 270);
+  --g-sidebar-foreground: oklch(0.97 0.005 270);
+  --g-sidebar-primary: oklch(0.63 0.22 285);
+  --g-sidebar-primary-foreground: oklch(0.99 0 0);
+  --g-sidebar-accent: oklch(0.24 0.04 285);
+  --g-sidebar-accent-foreground: oklch(0.97 0.005 270);
+  --g-sidebar-border: oklch(1 0 0 / 10%);
+  --g-sidebar-ring: oklch(0.63 0.22 285);
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
