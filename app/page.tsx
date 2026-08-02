@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { HeroCompilerDemo } from "@/components/hero-compiler-demo";
 import { ProblemComparison } from "@/components/problem-comparison";
 import { HowItWorks } from "@/components/how-it-works";
+import { FrameworkShowcase } from "@/components/framework-showcase";
 
 const highlights = [
   {
@@ -283,6 +284,8 @@ export default function Home() {
         <ProblemComparison />
 
         <HowItWorks />
+
+        <FrameworkShowcase />
       </main>
 
       <SiteFooter />
