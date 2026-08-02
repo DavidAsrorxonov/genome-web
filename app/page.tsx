@@ -10,6 +10,7 @@ import { HeroCompilerDemo } from "@/components/hero-compiler-demo";
 import { ProblemComparison } from "@/components/problem-comparison";
 import { HowItWorks } from "@/components/how-it-works";
 import { FrameworkShowcase } from "@/components/framework-showcase";
+import { CapabilityGrid } from "@/components/capability-grid";
 
 const highlights = [
   {
@@ -286,6 +287,8 @@ export default function Home() {
         <HowItWorks />
 
         <FrameworkShowcase />
+
+        <CapabilityGrid />
       </main>
 
       <SiteFooter />
