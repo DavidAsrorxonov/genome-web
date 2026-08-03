@@ -1,5 +1,12 @@
 {
   "title": "GenomeJS",
   "description": "Documentation for the GenomeJS reactive design-token compiler.",
-  "pages": ["---Introduction---", "index", "installation", "quick-start"]
+  "pages": [
+    "---Introduction---",
+    "index",
+    "installation",
+    "quick-start",
+    "core-concepts",
+    "core"
+  ]
 }

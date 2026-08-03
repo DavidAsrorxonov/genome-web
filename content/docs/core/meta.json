@@ -1,0 +1,6 @@
+{
+  "title": "Core",
+  "description": "The framework-neutral GenomeJS compiler and runtime.",
+  "defaultOpen": true,
+  "pages": ["genome", "primitives", "tokens", "context"]
+}

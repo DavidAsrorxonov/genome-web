@@ -1,0 +1,252 @@
+---
+title: Primitives
+description: Define the raw string and number values used by a Genome token system.
+---
+
+Primitives are raw values that enter the token graph without depending on other values.
+
+```ts
+const genome = new Genome({
+  primitives: {
+    brandColor: "#7c6cff",
+    baseSpacing: 16,
+    baseRadius: 12,
+  },
+
+  tokens: {},
+});
+```
+
+## Supported values
+
+The current `Primitive` type is:
+
+```ts
+type Primitive = string | number;
+```
+
+Valid examples:
+
+```ts
+const primitives = {
+  color: "#7c6cff",
+  fontFamily: "Inter, sans-serif",
+  spacing: 16,
+  lineHeight: 1.5,
+};
+```
+
+Objects, arrays, booleans, functions, and `null` are not part of the current public primitive type.
+
+## Why primitives exist
+
+Primitives provide stable inputs for derived tokens.
+
+```ts
+const genome = new Genome({
+  primitives: {
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    controlGap: (dna) => Number(dna.baseSpacing) * 0.75,
+
+    sectionGap: (dna) => Number(dna.baseSpacing) * 4,
+  },
+});
+```
+
+Both derived values depend on one source value.
+
+```text
+             ┌──→ controlGap
+baseSpacing ─┤
+             └──→ sectionGap
+```
+
+## Accessing primitives
+
+Primitives are part of the resolved DNA and can be read with `getTrait()`:
+
+```ts
+genome.getTrait("baseSpacing");
+// 16
+```
+
+They are also available to token functions through `dna`:
+
+```ts
+const tokens = {
+  sectionGap: (dna) => Number(dna.baseSpacing) * 4,
+};
+```
+
+## CSS output
+
+Primitive names are converted to CSS custom-property names.
+
+```ts
+const primitives = {
+  baseSpacing: 16,
+  brandColor: "#7c6cff",
+};
+```
+
+Produces:
+
+```css
+--g-base-spacing: 16;
+--g-brand-color: #7c6cff;
+```
+
+Numbers are converted to strings without units.
+
+```css
+--g-base-spacing: 16;
+```
+
+Add a unit in a derived token when CSS requires one:
+
+```ts
+const tokens = {
+  spacing: (dna) => `${dna.baseSpacing}px`,
+};
+```
+
+Produces:
+
+```css
+--g-spacing: 16px;
+```
+
+## Primitives are copied at construction
+
+The Genome constructor copies the primitive record.
+
+```ts
+const primitives = {
+  spacing: 16,
+};
+
+const genome = new Genome({
+  primitives,
+  tokens: {},
+});
+```
+
+Changing the original object later does not mutate the Genome:
+
+```ts
+primitives.spacing = 32;
+
+genome.getTrait("spacing");
+// still 16
+```
+
+There is currently no public primitive-mutation method. Use runtime context for values that need to change after construction.
+
+## Primitive or context?
+
+Use a primitive when the value is part of the stable token configuration:
+
+```ts
+primitives: {
+  baseSpacing: 16,
+}
+```
+
+Use context when the value may change at runtime:
+
+```ts
+genome.mutate({
+  scale: 1.25,
+});
+```
+
+Then combine them:
+
+```ts
+tokens: {
+  spacing: (dna, context) =>
+    `${
+      Number(dna.baseSpacing) *
+      Number(context.scale ?? 1)
+    }px`,
+}
+```
+
+## Primitive or token?
+
+Use a primitive for a raw input:
+
+```ts
+primitives: {
+  baseRadius: 12,
+}
+```
+
+Use a token for a relationship:
+
+```ts
+tokens: {
+  dialogRadius: (dna) =>
+    `${Number(dna.baseRadius) * 1.5}px`,
+}
+```
+
+## Naming
+
+Prefer descriptive camel-case names:
+
+```ts
+const primitives = {
+  baseSpacing: 16,
+  neutralSurface: "#121620",
+  compactControlHeight: 36,
+};
+```
+
+They become predictable kebab-case CSS names:
+
+```css
+--g-base-spacing
+--g-neutral-surface
+--g-compact-control-height
+```
+
+## Common mistakes
+
+### Putting changing state in primitives
+
+Primitives cannot currently be changed through `mutate()`.
+
+Place changing values in context instead.
+
+### Forgetting CSS units
+
+```ts
+primitives: {
+  spacing: 16,
+}
+```
+
+Produces `16`, not `16px`.
+
+Create a derived token when a unit is required.
+
+### Using unsupported value types
+
+This is outside the current primitive type:
+
+```ts
+primitives: {
+  breakpoints: [640, 768, 1024],
+}
+```
+
+Store individual values or encode the value as a supported string when appropriate.
+
+## Next pages
+
+- [Tokens](/docs/core/tokens)
+- [Context](/docs/core/context)

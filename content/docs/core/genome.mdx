@@ -1,0 +1,240 @@
+---
+title: Genome
+description: Create and use the central GenomeJS compiler and runtime instance.
+---
+
+`Genome` is the central class exported by `@genomejs/core`.
+
+It compiles token relationships, stores runtime context, resolves current values, expresses CSS custom properties, and notifies subscribers.
+
+## Import
+
+```ts
+import { Genome } from "@genomejs/core";
+```
+
+## Constructor
+
+```ts
+new Genome(config, target?)
+```
+
+### Parameters
+
+| Parameter | Type                  | Description                                    |
+| --------- | --------------------- | ---------------------------------------------- |
+| `config`  | `GenomeConfig`        | Primitive values and derived token definitions |
+| `target`  | `HTMLElement \| null` | Element that receives generated CSS properties |
+
+In a browser, `target` defaults to:
+
+```ts
+document.documentElement;
+```
+
+Outside a browser, it defaults to `null`.
+
+## Smallest example
+
+```ts
+import { Genome } from "@genomejs/core";
+
+const genome = new Genome({
+  primitives: {
+    spacing: 16,
+  },
+
+  tokens: {
+    doubledSpacing: (dna) => Number(dna.spacing) * 2,
+  },
+});
+
+console.log(genome.getTrait("doubledSpacing"));
+// 32
+```
+
+## Configuration
+
+The constructor requires both configuration properties:
+
+```ts
+const config = {
+  primitives: {},
+  tokens: {},
+};
+```
+
+### `primitives`
+
+Raw string and number inputs:
+
+```ts
+primitives: {
+  color: "#7c6cff",
+  spacing: 16,
+}
+```
+
+### `tokens`
+
+Function-valued derived tokens:
+
+```ts
+tokens: {
+  largeSpacing: (dna) =>
+    Number(dna.spacing) * 2,
+}
+```
+
+For the current implementation, place static values under `primitives` rather than `tokens`.
+
+## Custom target
+
+Pass a target when the values should be scoped to one part of the page:
+
+```ts
+const target = document.querySelector<HTMLElement>("[data-app-shell]");
+
+const genome = new Genome(
+  {
+    primitives: {
+      color: "#7c6cff",
+    },
+
+    tokens: {},
+  },
+  target,
+);
+```
+
+When `target` is `null`, values can still be resolved and read, but no CSS properties are written.
+
+```ts
+const genome = new Genome(
+  {
+    primitives: {
+      spacing: 16,
+    },
+
+    tokens: {},
+  },
+  null,
+);
+
+genome.getTrait("spacing");
+// 16
+```
+
+## Initial resolution
+
+The constructor immediately:
+
+1. Copies the configuration
+2. Discovers dependencies
+3. Validates the dependency graph
+4. Determines the resolution order
+5. Resolves the initial DNA values
+6. Expresses those values when a target exists
+
+This means graph errors can be thrown during construction.
+
+```ts
+const genome = new Genome({
+  primitives: {},
+
+  tokens: {
+    first: (dna) => Number(dna.second),
+
+    second: (dna) => Number(dna.first),
+  },
+});
+```
+
+The example above throws `CircularDependencyError`.
+
+## Available methods
+
+A Genome instance currently exposes:
+
+```ts
+genome.mutate(patch);
+genome.getTrait(name);
+genome.subscribe(listener);
+genome.scope(target, overrides);
+```
+
+### `mutate()`
+
+Merge new runtime context and resolve derived values again.
+
+```ts
+genome.mutate({
+  mode: "dark",
+});
+```
+
+### `getTrait()`
+
+Read one resolved value.
+
+```ts
+genome.getTrait("spacing");
+```
+
+### `subscribe()`
+
+Run a listener after resolution.
+
+```ts
+const unsubscribe = genome.subscribe(() => {
+  console.log("Genome updated");
+});
+```
+
+### `scope()`
+
+Create a child instance targeting another element.
+
+```ts
+const child = genome.scope(element, {
+  density: "compact",
+});
+```
+
+Dedicated API pages for these methods will be added later in the Core section.
+
+## Server rendering
+
+`Genome` can be constructed without access to `document`.
+
+```ts
+const genome = new Genome({
+  primitives: {
+    label: "Hello",
+  },
+
+  tokens: {},
+});
+```
+
+On the server, the default target is `null`. Resolved values remain readable through `getTrait()`.
+
+For browser CSS output, create or attach the browser-side Genome to a real element.
+
+## Error behavior
+
+Construction may throw when:
+
+- A token reads an unknown DNA property
+- The derived token graph contains a cycle
+
+`getTrait()` throws when the requested name is not present in the resolved DNA.
+
+Token functions may also throw their own runtime errors during actual resolution.
+
+## Related pages
+
+- [Primitives](/docs/core/primitives)
+- [Tokens](/docs/core/tokens)
+- [Context](/docs/core/context)
+- [Core Concepts](/docs/core-concepts)

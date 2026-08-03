@@ -1,0 +1,278 @@
+---
+title: Core Concepts
+description: Understand primitives, derived tokens, runtime context, the DNA object, mutation, and CSS expression.
+---
+
+GenomeJS turns a collection of values and relationships into a reactive token system.
+
+A typical configuration contains:
+
+1. **Primitives** — raw string and number values
+2. **Tokens** — functions that derive new values
+3. **Context** — runtime conditions that may change
+4. **DNA** — the current flat object of resolved values
+5. **A target** — the element that receives generated CSS custom properties
+
+```text
+Primitives ───────┐
+                  ├──→ Token functions ──→ Resolved DNA
+Other tokens ─────┤                           │
+                  │                           ├──→ CSS custom properties
+Runtime context ──┘                           └──→ Subscribers
+```
+
+## Primitives
+
+Primitives are the raw inputs of a Genome.
+
+```ts
+const primitives = {
+  baseSpacing: 16,
+  brandColor: "#7c6cff",
+};
+```
+
+Primitive values may currently be strings or numbers.
+
+They are copied directly into the resolved DNA object and expressed as CSS custom properties.
+
+```css
+--g-base-spacing: 16;
+--g-brand-color: #7c6cff;
+```
+
+Use primitives for values that do not depend on other values or runtime context.
+
+## Tokens
+
+Tokens are functions that calculate derived values.
+
+```ts
+const tokens = {
+  spacing: (dna, context) =>
+    `${Number(dna.baseSpacing) * Number(context.scale ?? 1)}px`,
+};
+```
+
+A token receives two arguments:
+
+```ts
+(dna, context) => value;
+```
+
+- `dna` provides primitives and previously resolved tokens.
+- `context` provides runtime state.
+
+Token relationships are discovered from property reads on `dna`.
+
+```ts
+const tokens = {
+  controlSpacing: (dna) => Number(dna.baseSpacing) * 0.75,
+
+  sectionSpacing: (dna) => Number(dna.controlSpacing) * 4,
+};
+```
+
+GenomeJS discovers this chain:
+
+```text
+baseSpacing
+     ↓
+controlSpacing
+     ↓
+sectionSpacing
+```
+
+It then finds an order in which those values can be resolved safely.
+
+## Runtime context
+
+Context stores environmental or application state that may change while the application runs.
+
+```ts
+genome.mutate({
+  mode: "dark",
+  scale: 1.25,
+  density: "compact",
+});
+```
+
+Context can contain any property names your token functions understand.
+
+Typical examples include:
+
+- Color mode
+- Contrast preference
+- Density
+- Viewport category
+- Container width
+- User-selected scale
+- Input method
+- Application state
+
+The Core package does not enforce a context schema. Your application should validate or narrow values when a token expects a particular type.
+
+```ts
+const scale = typeof context.scale === "number" ? context.scale : 1;
+```
+
+## The DNA object
+
+DNA is the flat object containing the Genome’s currently resolved values.
+
+Given:
+
+```ts
+const genome = new Genome({
+  primitives: {
+    spacing: 16,
+  },
+
+  tokens: {
+    compactSpacing: (dna) => Number(dna.spacing) * 0.75,
+  },
+});
+```
+
+The resolved DNA is conceptually:
+
+```ts
+{
+  spacing: 16,
+  compactSpacing: 12,
+}
+```
+
+The full DNA object is internal, but individual values are available through `getTrait()`:
+
+```ts
+genome.getTrait("compactSpacing");
+// 12
+```
+
+Framework adapters expose the same values through their framework’s reactive APIs.
+
+## Mutation
+
+`mutate()` shallowly merges a context patch into the current context.
+
+```ts
+genome.mutate({
+  scale: 1.25,
+});
+```
+
+A later mutation can change one property without repeating the others:
+
+```ts
+genome.mutate({
+  mode: "dark",
+});
+```
+
+Conceptually, the context becomes:
+
+```ts
+{
+  scale: 1.25,
+  mode: "dark",
+}
+```
+
+After a mutation, GenomeJS:
+
+1. Resolves all derived token functions
+2. Stores the new DNA values
+3. Expresses changed values as CSS custom properties
+4. Notifies subscribers
+
+## CSS expression
+
+Resolved values are expressed using the `--g-` prefix.
+
+Camel-cased token names are converted to kebab case:
+
+```text
+buttonColor   → --g-button-color
+sectionGap    → --g-section-gap
+baseRadius    → --g-base-radius
+```
+
+Use the generated values in ordinary CSS:
+
+```css
+.card {
+  gap: var(--g-section-gap);
+  border-radius: var(--g-base-radius);
+}
+```
+
+GenomeJS skips a CSS write when the newly resolved string value is identical to the last expressed value.
+
+## Subscriptions
+
+Applications can subscribe directly to changes:
+
+```ts
+const unsubscribe = genome.subscribe(() => {
+  console.log(genome.getTrait("sectionGap"));
+});
+```
+
+Always call the returned cleanup function when the subscription is no longer needed:
+
+```ts
+unsubscribe();
+```
+
+React, Vue, and Svelte adapters manage this subscription lifecycle for components.
+
+## Scoped instances
+
+A child Genome can express the same token system onto a different element with context overrides:
+
+```ts
+const panel = document.querySelector<HTMLElement>("[data-panel]");
+
+if (panel) {
+  const panelGenome = genome.scope(panel, {
+    density: "compact",
+  });
+}
+```
+
+The parent and child have independent context and resolved output.
+
+## Recommended mental model
+
+Think of GenomeJS as a small reactive compiler:
+
+```text
+Configuration
+    ↓
+Dependency discovery
+    ↓
+Graph validation and ordering
+    ↓
+Value resolution
+    ↓
+CSS output and subscriptions
+```
+
+## Current constraints
+
+For the current package version:
+
+- Primitive values are strings or numbers.
+- Static values should be placed under `primitives`.
+- Entries under `tokens` should be functions.
+- Context values are application-defined and should be validated when necessary.
+- Dependency discovery tracks `dna` property reads.
+- A context mutation causes derived tokens to resolve again.
+
+## Next steps
+
+- [The Genome class](/docs/core/genome)
+- [Primitives](/docs/core/primitives)
+- [Tokens](/docs/core/tokens)
+- [Runtime context](/docs/core/context)

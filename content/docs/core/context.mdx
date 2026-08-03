@@ -1,0 +1,354 @@
+---
+title: Context
+description: Model runtime conditions and update derived tokens with Genome mutation.
+---
+
+Runtime context contains values that can change after a Genome is created.
+
+```ts
+genome.mutate({
+  mode: "dark",
+  scale: 1.25,
+});
+```
+
+Token functions receive the current context as their second argument:
+
+```ts
+const tokens = {
+  surface: (_dna, context) => (context.mode === "dark" ? "#121620" : "#ffffff"),
+};
+```
+
+## Context type
+
+The public context type is an open record:
+
+```ts
+interface RuntimeContext {
+  [key: string]: unknown;
+}
+```
+
+GenomeJS does not reserve specific context properties.
+
+These are all application-defined:
+
+```ts
+genome.mutate({
+  mode: "dark",
+  scale: 1.25,
+  density: "compact",
+  viewport: "desktop",
+  containerWidth: 720,
+});
+```
+
+## Initial context
+
+A new Genome begins with an empty context:
+
+```ts
+{
+}
+```
+
+Apply initial runtime values after construction:
+
+```ts
+const genome = new Genome({
+  primitives: {
+    spacing: 16,
+  },
+
+  tokens: {
+    gap: (dna, context) =>
+      `${Number(dna.spacing) * Number(context.scale ?? 1)}px`,
+  },
+});
+
+genome.mutate({
+  scale: 1,
+});
+```
+
+Token functions should include sensible fallbacks because they are initially resolved before the first explicit mutation.
+
+```ts
+Number(context.scale ?? 1);
+```
+
+## Mutation is a shallow merge
+
+Given this context:
+
+```ts
+{
+  mode: "light",
+  scale: 1,
+}
+```
+
+Calling:
+
+```ts
+genome.mutate({
+  mode: "dark",
+});
+```
+
+Produces:
+
+```ts
+{
+  mode: "dark",
+  scale: 1,
+}
+```
+
+Properties not included in the patch remain unchanged.
+
+Nested objects are not deeply merged.
+
+```ts
+genome.mutate({
+  viewport: {
+    width: 1280,
+    height: 720,
+  },
+});
+```
+
+A later mutation replaces the entire `viewport` value:
+
+```ts
+genome.mutate({
+  viewport: {
+    width: 768,
+  },
+});
+```
+
+Prefer flat context properties when possible:
+
+```ts
+genome.mutate({
+  viewportWidth: 768,
+  viewportHeight: 720,
+});
+```
+
+## Narrow unknown values
+
+Because context values are `unknown`, token functions should check their expected type.
+
+```ts
+const tokens = {
+  gap: (dna, context) => {
+    const scale = typeof context.scale === "number" ? context.scale : 1;
+
+    return `${Number(dna.spacing) * scale}px`;
+  },
+};
+```
+
+For string unions:
+
+```ts
+type Mode = "light" | "dark";
+
+function readMode(context: RuntimeContext): Mode {
+  return context.mode === "dark" ? "dark" : "light";
+}
+```
+
+Then use the helper:
+
+```ts
+const tokens = {
+  surface: (_dna, context) =>
+    readMode(context) === "dark" ? "#121620" : "#ffffff",
+};
+```
+
+## Common context patterns
+
+### Color mode
+
+```ts
+genome.mutate({
+  mode: "dark",
+});
+```
+
+```ts
+const tokens = {
+  surface: (_dna, context) => (context.mode === "dark" ? "#121620" : "#ffffff"),
+};
+```
+
+### User scale
+
+```ts
+genome.mutate({
+  scale: 1.25,
+});
+```
+
+```ts
+const tokens = {
+  spacing: (dna, context) => {
+    const scale = typeof context.scale === "number" ? context.scale : 1;
+
+    return `${Number(dna.baseSpacing) * scale}px`;
+  },
+};
+```
+
+### Density
+
+```ts
+genome.mutate({
+  density: "compact",
+});
+```
+
+```ts
+const tokens = {
+  controlHeight: (_dna, context) =>
+    context.density === "compact" ? "36px" : "44px",
+};
+```
+
+### Container width
+
+```ts
+genome.mutate({
+  containerWidth: 480,
+});
+```
+
+```ts
+const tokens = {
+  columns: (_dna, context) => {
+    const width =
+      typeof context.containerWidth === "number" ? context.containerWidth : 0;
+
+    return width >= 720 ? 3 : 1;
+  },
+};
+```
+
+## One mutation, multiple tokens
+
+Several tokens can respond to the same context property:
+
+```ts
+const tokens = {
+  gap: (dna, context) => {
+    const compact = context.density === "compact";
+
+    return compact
+      ? `${Number(dna.baseSpacing) * 0.5}px`
+      : `${dna.baseSpacing}px`;
+  },
+
+  controlHeight: (_dna, context) =>
+    context.density === "compact" ? "36px" : "44px",
+
+  radius: (_dna, context) => (context.density === "compact" ? "8px" : "12px"),
+};
+```
+
+```ts
+genome.mutate({
+  density: "compact",
+});
+```
+
+All derived tokens resolve again. CSS properties whose final string value did not change are not rewritten.
+
+## Context and subscriptions
+
+Subscribers run after a mutation has been resolved and expressed:
+
+```ts
+const unsubscribe = genome.subscribe(() => {
+  console.log(genome.getTrait("controlHeight"));
+});
+
+genome.mutate({
+  density: "compact",
+});
+```
+
+## Context and scoped instances
+
+A scoped child receives the parent context plus overrides:
+
+```ts
+genome.mutate({
+  mode: "light",
+  density: "comfortable",
+});
+
+const child = genome.scope(element, {
+  density: "compact",
+});
+```
+
+Conceptually:
+
+```text
+parent context:
+  mode = light
+  density = comfortable
+
+child context:
+  mode = light
+  density = compact
+```
+
+Later parent mutations do not automatically mutate the already-created child instance.
+
+## What can go wrong?
+
+### No fallback for initial resolution
+
+This may produce `NaN` before an initial mutation:
+
+```ts
+const tokens = {
+  spacing: (dna, context) => Number(dna.spacing) * Number(context.scale),
+};
+```
+
+Use:
+
+```ts
+Number(context.scale ?? 1);
+```
+
+### Assuming context is strongly typed
+
+This is unsafe:
+
+```ts
+context.scale.toFixed(1);
+```
+
+Narrow the value first.
+
+### Expecting a deep merge
+
+`mutate()` performs a shallow object merge.
+
+### Using context for stable configuration
+
+Values that never change are usually clearer as primitives.
+
+## Related pages
+
+- [Tokens](/docs/core/tokens)
+- [Primitives](/docs/core/primitives)
+- [Genome](/docs/core/genome)

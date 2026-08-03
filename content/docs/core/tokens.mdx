@@ -1,0 +1,310 @@
+---
+title: Tokens
+description: Define derived token functions and understand GenomeJS dependency discovery and resolution.
+---
+
+Tokens calculate values from primitives, other resolved tokens, and runtime context.
+
+```ts
+const tokens = {
+  sectionGap: (dna, context) =>
+    `${Number(dna.baseSpacing) * Number(context.scale ?? 1) * 4}px`,
+};
+```
+
+## Token signature
+
+A derived token function has this shape:
+
+```ts
+type TokenFn = (dna: DNAReader, context: RuntimeContext) => string | number;
+```
+
+The function must return a string or number.
+
+```ts
+const tokens = {
+  radius: () => "12px",
+  columns: () => 3,
+};
+```
+
+## Reading primitives
+
+```ts
+const genome = new Genome({
+  primitives: {
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    sectionGap: (dna) => `${Number(dna.baseSpacing) * 4}px`,
+  },
+});
+```
+
+GenomeJS discovers that `sectionGap` reads `baseSpacing`.
+
+## Reading other tokens
+
+```ts
+const genome = new Genome({
+  primitives: {
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    controlGap: (dna) => Number(dna.baseSpacing) * 0.75,
+
+    sectionGap: (dna) => `${Number(dna.controlGap) * 4}px`,
+  },
+});
+```
+
+The graph becomes:
+
+```text
+baseSpacing
+     ↓
+controlGap
+     ↓
+sectionGap
+```
+
+GenomeJS resolves `controlGap` before `sectionGap`.
+
+## Reading context
+
+```ts
+const tokens = {
+  surface: (_dna, context) => (context.mode === "dark" ? "#121620" : "#ffffff"),
+};
+```
+
+Context values are not DNA tokens. They are runtime inputs used during resolution.
+
+A call to `mutate()` causes the derived token functions to run again.
+
+```ts
+genome.mutate({
+  mode: "dark",
+});
+```
+
+## Dependency discovery
+
+GenomeJS performs a tracking pass when the Genome is constructed.
+
+During that pass, it records property reads from `dna`:
+
+```ts
+const tokens = {
+  border: (dna) => `1px solid ${dna.borderColor}`,
+};
+```
+
+This establishes:
+
+```text
+borderColor → border
+```
+
+You do not declare this relationship separately.
+
+## Dynamic DNA property access
+
+Prefer direct property reads:
+
+```ts
+const tokens = {
+  surface: (dna) => dna.darkSurface,
+};
+```
+
+Avoid hiding dependency names behind unrelated dynamic behavior:
+
+```ts
+const key = getTokenNameAtRuntime();
+
+const tokens = {
+  surface: (dna) => dna[key],
+};
+```
+
+The dependency graph is compiled when the Genome is created, so token relationships should remain structurally predictable.
+
+## Keep token functions pure
+
+Token functions run:
+
+- During dependency tracking
+- During initial resolution
+- After context mutations
+- When scoped child instances are created
+
+Avoid side effects:
+
+```ts
+const tokens = {
+  spacing: (dna) => {
+    analytics.track("token resolved");
+
+    return Number(dna.baseSpacing);
+  },
+};
+```
+
+Prefer pure calculation:
+
+```ts
+const tokens = {
+  spacing: (dna) => Number(dna.baseSpacing),
+};
+```
+
+Purity makes tracking and repeated resolution predictable.
+
+## Handling context types
+
+`RuntimeContext` stores values as `unknown`.
+
+Narrow values before using them:
+
+```ts
+const tokens = {
+  spacing: (dna, context) => {
+    const scale = typeof context.scale === "number" ? context.scale : 1;
+
+    return `${Number(dna.baseSpacing) * scale}px`;
+  },
+};
+```
+
+## Output values
+
+Tokens may return strings:
+
+```ts
+const tokens = {
+  radius: () => "12px",
+  surface: () => "#121620",
+};
+```
+
+Or numbers:
+
+```ts
+const tokens = {
+  columns: () => 3,
+  opacity: () => 0.8,
+};
+```
+
+The value is stored in DNA and converted to a string when expressed as CSS.
+
+## Static token values
+
+The public type currently permits this shape:
+
+```ts
+tokens: {
+  radius: 12,
+}
+```
+
+However, the current runtime resolution path only processes function-valued entries in `tokens`.
+
+Use this instead:
+
+```ts
+primitives: {
+  radius: 12,
+}
+```
+
+Or use a derived function when a relationship is required:
+
+```ts
+tokens: {
+  radius: (dna) =>
+    Number(dna.baseRadius),
+}
+```
+
+## Unresolved references
+
+A token that reads an unknown DNA property causes construction to fail:
+
+```ts
+const genome = new Genome({
+  primitives: {},
+
+  tokens: {
+    surface: (dna) => dna.missingSurface,
+  },
+});
+```
+
+GenomeJS throws `UnresolvedTokenError`.
+
+## Circular dependencies
+
+This graph cannot be resolved:
+
+```ts
+const genome = new Genome({
+  primitives: {},
+
+  tokens: {
+    first: (dna) => Number(dna.second),
+
+    second: (dna) => Number(dna.first),
+  },
+});
+```
+
+GenomeJS throws `CircularDependencyError`.
+
+## Multi-level derivation
+
+Deep dependency chains are valid when they remain acyclic:
+
+```ts
+const genome = new Genome({
+  primitives: {
+    unit: 4,
+  },
+
+  tokens: {
+    small: (dna) => Number(dna.unit) * 2,
+
+    medium: (dna) => Number(dna.small) * 2,
+
+    large: (dna) => Number(dna.medium) * 2,
+  },
+});
+```
+
+Resolved values:
+
+```text
+unit   = 4
+small  = 8
+medium = 16
+large  = 32
+```
+
+## What can go wrong?
+
+- Reading a missing DNA property
+- Creating a dependency cycle
+- Returning an unsupported value type
+- Assuming an unvalidated context value has the correct type
+- Adding side effects to a function that resolves repeatedly
+- Using changing relationships that differ between tracking and resolution
+
+## Related pages
+
+- [Primitives](/docs/core/primitives)
+- [Context](/docs/core/context)
+- [Genome](/docs/core/genome)
