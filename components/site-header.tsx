@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, GitBranch, Package } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
+import { GitHub } from "@/components/icons/github";
 import { Logo } from "@/components/logo";
 import { MobileNavigation } from "@/components/mobile-navigation";
+import { NPM } from "@/components/icons/npm";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -88,7 +90,7 @@ export function SiteHeader() {
               size: "icon-sm",
             })}
           >
-            <GitBranch className="size-4" aria-hidden="true" />
+            <GitHub className="size-4" aria-hidden="true" />
           </a>
 
           <a
@@ -105,7 +107,7 @@ export function SiteHeader() {
               "hidden sm:inline-flex",
             )}
           >
-            <Package className="size-4" aria-hidden="true" />
+            <NPM className="size-4" aria-hidden="true" />
           </a>
 
           <ThemeToggle />

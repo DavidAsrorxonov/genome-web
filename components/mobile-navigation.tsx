@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, GitBranch, Menu, Package } from "lucide-react";
+import { ArrowRight, Menu } from "lucide-react";
 
+import { GitHub } from "@/components/icons/github";
 import { Logo } from "@/components/logo";
+import { NPM } from "@/components/icons/npm";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
@@ -33,12 +35,12 @@ const externalLinks = [
   {
     label: "GitHub",
     href: "https://github.com/DavidAsrorxonov/genome",
-    icon: GitBranch,
+    icon: GitHub,
   },
   {
     label: "npm",
     href: "https://www.npmjs.com/package/@genomejs/core",
-    icon: Package,
+    icon: NPM,
   },
 ];
 
