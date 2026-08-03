@@ -1,0 +1,395 @@
+---
+title: bindContainerSize()
+description: Synchronize an element’s observed content width into Genome runtime context.
+---
+
+`bindContainerSize()` observes one HTML element and writes its current content width into Genome runtime context.
+
+It uses `ResizeObserver`.
+
+## Import
+
+```ts
+import { bindContainerSize } from "@genomejs/core";
+```
+
+## Signature
+
+```ts
+bindContainerSize(
+  genome: Genome,
+  element: HTMLElement,
+): () => void
+```
+
+## Parameters
+
+| Parameter | Type          | Description                                    |
+| --------- | ------------- | ---------------------------------------------- |
+| `genome`  | `Genome`      | Genome instance that receives width changes    |
+| `element` | `HTMLElement` | Element whose content width should be observed |
+
+## Return value
+
+```ts
+() => void
+```
+
+Call the returned function to disconnect the `ResizeObserver`.
+
+## Context value
+
+The binding writes this exact key:
+
+```ts
+{
+  containerWidth: number;
+}
+```
+
+Token functions should read:
+
+```ts
+context.containerWidth;
+```
+
+## Basic example
+
+```ts
+import { bindContainerSize, Genome } from "@genomejs/core";
+
+const genome = new Genome({
+  primitives: {
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    columns: (_dna, context) => {
+      const width =
+        typeof context.containerWidth === "number" ? context.containerWidth : 0;
+
+      if (width >= 900) {
+        return 3;
+      }
+
+      if (width >= 560) {
+        return 2;
+      }
+
+      return 1;
+    },
+
+    cardGap: (dna, context) => {
+      const width =
+        typeof context.containerWidth === "number" ? context.containerWidth : 0;
+
+      return width >= 560
+        ? `${dna.baseSpacing}px`
+        : `${Number(dna.baseSpacing) * 0.75}px`;
+    },
+  },
+});
+
+const element = document.querySelector<HTMLElement>("[data-card-grid]");
+
+if (!element) {
+  throw new Error("Card grid was not found.");
+}
+
+const cleanup = bindContainerSize(genome, element);
+```
+
+## Consume the values with CSS
+
+The binding itself only updates context.
+
+Derived Genome tokens then produce CSS values:
+
+```css
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--g-columns), minmax(0, 1fr));
+  gap: var(--g-card-gap);
+}
+```
+
+Because `columns` returns a number, GenomeJS expresses it as:
+
+```css
+--g-columns: 2;
+```
+
+## Cleanup
+
+```ts
+const cleanup = bindContainerSize(genome, element);
+
+// Later
+cleanup();
+```
+
+The cleanup disconnects the observer completely.
+
+## React example
+
+```tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import { bindContainerSize } from "@genomejs/core";
+
+import { cardGenome } from "@/lib/card-genome";
+
+export function CardGrid() {
+  const gridRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const element = gridRef.current;
+
+    if (!element) {
+      return;
+    }
+
+    return bindContainerSize(cardGenome, element);
+  }, []);
+
+  return (
+    <div ref={gridRef} className="card-grid">
+      {/* Cards */}
+    </div>
+  );
+}
+```
+
+## Vue example
+
+```vue
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref } from "vue";
+
+import { bindContainerSize } from "@genomejs/core";
+
+import { cardGenome } from "@/lib/card-genome";
+
+const grid = ref<HTMLElement | null>(null);
+
+let cleanup: (() => void) | undefined;
+
+onMounted(() => {
+  if (!grid.value) {
+    return;
+  }
+
+  cleanup = bindContainerSize(cardGenome, grid.value);
+});
+
+onUnmounted(() => {
+  cleanup?.();
+});
+</script>
+
+<template>
+  <div ref="grid" class="card-grid">
+    <!-- Cards -->
+  </div>
+</template>
+```
+
+## Svelte example
+
+```svelte
+<script lang="ts">
+  import {
+    onMount,
+  } from "svelte";
+
+  import {
+    bindContainerSize,
+  } from "@genomejs/core";
+
+  import {
+    cardGenome,
+  } from "$lib/card-genome";
+
+  let grid:
+    HTMLElement;
+
+  onMount(() => {
+    return bindContainerSize(
+      cardGenome,
+      grid,
+    );
+  });
+</script>
+
+<div
+  bind:this={grid}
+  class="card-grid"
+>
+  <!-- Cards -->
+</div>
+```
+
+## Content width
+
+The utility writes:
+
+```ts
+entry.contentRect.width;
+```
+
+This represents the width reported by the observer’s content rectangle.
+
+It is not necessarily identical to:
+
+- Viewport width
+- Border-box width
+- `window.innerWidth`
+- The element’s inline style width
+- Available space before layout
+
+Build token thresholds around the observed content width.
+
+## Initial value timing
+
+The utility begins observing immediately:
+
+```ts
+observer.observe(element);
+```
+
+It does not manually call `genome.mutate()` before the first `ResizeObserver` callback.
+
+Therefore, token functions need a fallback for the initial resolution:
+
+```ts
+const width =
+  typeof context.containerWidth === "number" ? context.containerWidth : 0;
+```
+
+The browser then delivers the observed width asynchronously through the observer callback.
+
+## Container-aware components
+
+A scoped Genome and a container binding work well together:
+
+```ts
+const componentGenome = rootGenome.scope(componentElement, {
+  density: "comfortable",
+});
+
+const cleanup = bindContainerSize(componentGenome, componentElement);
+```
+
+The child Genome:
+
+- Writes CSS properties on the component element
+- Receives that element’s width
+- Resolves component-specific tokens
+- Keeps its context separate from the parent
+
+## Multiple containers
+
+Use a separate scoped Genome for independently responsive components:
+
+```ts
+const firstGenome = rootGenome.scope(firstElement);
+
+const secondGenome = rootGenome.scope(secondElement);
+
+const cleanupFirst = bindContainerSize(firstGenome, firstElement);
+
+const cleanupSecond = bindContainerSize(secondGenome, secondElement);
+```
+
+A single Genome has one `containerWidth` context value at a time. Binding multiple elements to the same Genome would make them compete to update that one value.
+
+## Avoid feedback loops
+
+A token can change styles that affect the observed element’s width:
+
+```ts
+const tokens = {
+  panelWidth: (_dna, context) =>
+    Number(context.containerWidth) > 600 ? "50%" : "100%",
+};
+```
+
+Be careful when the resolved output changes the same measurement being observed. Layout changes may cause repeated observer callbacks.
+
+Prefer tokens that react to available width without directly forcing unstable oscillation around a threshold.
+
+## Browser-only API
+
+`bindContainerSize()` requires:
+
+```ts
+ResizeObserver;
+```
+
+and a real:
+
+```ts
+HTMLElement;
+```
+
+Call it only after the element exists in the browser.
+
+Do not call it during server rendering.
+
+## Older environments and tests
+
+Some test environments do not include `ResizeObserver`.
+
+Provide a mock or polyfill before calling the utility.
+
+The GenomeJS test suite verifies that:
+
+- The supplied element is observed
+- `containerWidth` receives `entry.contentRect.width`
+- Cleanup disconnects the observer
+
+## Element removal
+
+Call the cleanup when:
+
+- A component unmounts
+- The observed element is replaced
+- The Genome instance is discarded
+- The binding is no longer needed
+
+```ts
+cleanup();
+```
+
+The current cleanup disconnects the observer rather than calling `unobserve()` for one element.
+
+## Error behavior
+
+The function may throw when:
+
+- `ResizeObserver` is unavailable
+- The supplied value is not a valid `HTMLElement`
+- A token throws during the width mutation
+- A subscriber throws during mutation
+
+The utility does not provide an SSR fallback or automatic polyfill.
+
+## Notes
+
+- The utility is browser-only.
+- It observes one supplied element.
+- It writes `containerWidth`.
+- The value comes from `contentRect.width`.
+- The first mutation occurs in the observer callback.
+- The returned cleanup disconnects the observer.
+- Use separate scoped Genomes for independent containers.
+- Avoid layout feedback loops around width thresholds.
+
+## Related APIs
+
+- [`scope()`](/docs/core/scope)
+- [`mutate()`](/docs/core/mutate)
+- [Container-aware components](/docs/guides/container-aware-components)
+- [`bindMediaQueries()`](/docs/utilities/bind-media-queries)
+- [`fluidScale()`](/docs/utilities/fluid-scale)

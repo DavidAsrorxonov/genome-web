@@ -1,0 +1,268 @@
+---
+title: lockContrast()
+description: Adjust a foreground hexadecimal color toward a requested contrast ratio.
+---
+
+`lockContrast()` adjusts a foreground color until it reaches, or gets as close as its current algorithm can get to, a requested contrast ratio against a background.
+
+It is useful for derived foreground tokens whose source color may change at runtime.
+
+## Import
+
+```ts
+import { lockContrast } from "@genomejs/core";
+```
+
+## Signature
+
+```ts
+lockContrast(
+  foreground: string,
+  background: string,
+  minRatio?: number,
+): string
+```
+
+## Parameters
+
+| Parameter    | Type     | Default | Description                                              |
+| ------------ | -------- | ------- | -------------------------------------------------------- |
+| `foreground` | `string` | —       | Foreground hexadecimal color to test and possibly adjust |
+| `background` | `string` | —       | Background hexadecimal color                             |
+| `minRatio`   | `number` | `4.5`   | Requested minimum contrast ratio                         |
+
+## Return value
+
+```ts
+string;
+```
+
+The function returns either:
+
+- The original foreground when it already satisfies the target
+- An adjusted six-digit hexadecimal foreground
+
+## Already-compliant colors
+
+```ts
+import { lockContrast } from "@genomejs/core";
+
+const foreground = lockContrast("#000000", "#ffffff");
+
+console.log(foreground);
+// "#000000"
+```
+
+An already-compliant foreground is returned unchanged.
+
+## Adjust a low-contrast color
+
+```ts
+const foreground = lockContrast("#777777", "#888888", 4.5);
+
+console.log(foreground);
+// Adjusted hexadecimal color
+```
+
+Verify the result:
+
+```ts
+import { contrastRatio, lockContrast } from "@genomejs/core";
+
+const adjusted = lockContrast("#777777", "#888888", 4.5);
+
+const ratio = contrastRatio(adjusted, "#888888");
+
+console.log(ratio);
+```
+
+The Core test suite verifies that this example reaches at least `4.5`.
+
+## Use in a Genome token
+
+```ts
+import { Genome, lockContrast } from "@genomejs/core";
+
+const genome = new Genome({
+  primitives: {
+    lightSurface: "#ffffff",
+    darkSurface: "#121620",
+    preferredForeground: "#7c6cff",
+  },
+
+  tokens: {
+    surface: (dna, context) =>
+      context.mode === "dark" ? dna.darkSurface : dna.lightSurface,
+
+    foreground: (dna, context) =>
+      lockContrast(
+        String(dna.preferredForeground),
+        String(dna.surface),
+        context.contrast === "high" ? 7 : 4.5,
+      ),
+  },
+});
+
+genome.mutate({
+  mode: "dark",
+  contrast: "standard",
+});
+```
+
+GenomeJS discovers that `foreground` depends on:
+
+```text
+preferredForeground
+surface
+```
+
+When `surface` changes after a context mutation, the foreground is calculated again.
+
+## Standard and high-contrast modes
+
+```ts
+const tokens = {
+  foreground: (dna, context) => {
+    const target = context.contrast === "high" ? 7 : 4.5;
+
+    return lockContrast(
+      String(dna.preferredForeground),
+      String(dna.surface),
+      target,
+    );
+  },
+};
+```
+
+```ts
+genome.mutate({
+  contrast: "high",
+});
+```
+
+The meaning of each target remains an application decision. The utility only attempts to meet the numeric ratio supplied to it.
+
+## How adjustment works
+
+The current implementation:
+
+1. Checks the original contrast ratio
+2. Compares black and white against the background
+3. Chooses the more promising direction
+4. Shifts the foreground toward black or white
+5. Rechecks contrast
+6. Repeats for at most 20 iterations
+
+Each iteration shifts RGB channels by approximately ten percent of the full 0–255 channel range.
+
+The function does not search every possible color or preserve perceptual hue relationships precisely.
+
+## The result may change hue or saturation
+
+The current adjustment works by adding or subtracting the same amount from each RGB channel and clamping each channel between `0` and `255`.
+
+This can change:
+
+- Lightness
+- Saturation
+- Perceived hue near channel limits
+
+Treat the output as a practical contrast adjustment, not a full perceptual color-space optimizer.
+
+## Validate the returned ratio
+
+For ordinary thresholds and valid input, the algorithm generally moves toward the highest-contrast black or white direction.
+
+When the target is unusually high or impossible, validate the returned value:
+
+```ts
+const adjusted = lockContrast(foreground, background, target);
+
+const achieved = contrastRatio(adjusted, background);
+
+if (achieved < target) {
+  console.warn("Requested contrast was not reached.");
+}
+```
+
+The function does not throw when the requested target remains unmet after its iteration limit.
+
+## Input format
+
+Use standard six-digit RGB hexadecimal colors:
+
+```ts
+lockContrast("#7c6cff", "#121620");
+```
+
+The current implementation does not explicitly support:
+
+- Three-digit shorthand
+- Eight-digit alpha hex
+- `rgb()` or `hsl()`
+- CSS named colors
+- Transparency composition
+
+## User-provided colors
+
+Validate external values before use:
+
+```ts
+function assertHex(value: string): void {
+  if (!/^#[0-9a-f]{6}$/i.test(value)) {
+    throw new Error(`Invalid color: ${value}`);
+  }
+}
+```
+
+```ts
+assertHex(foreground);
+assertHex(background);
+
+const adjusted = lockContrast(foreground, background);
+```
+
+## Use the result as CSS
+
+```ts
+const foreground = lockContrast("#7c6cff", "#ffffff", 4.5);
+
+document.documentElement.style.setProperty(
+  "--accessible-foreground",
+  foreground,
+);
+```
+
+Inside GenomeJS, the resolved token is expressed automatically:
+
+```css
+--g-foreground: #...;
+```
+
+## Error behavior
+
+`lockContrast()` does not currently throw a dedicated error when:
+
+- A color format is invalid
+- The requested ratio is impossible
+- The iteration limit is reached
+- `minRatio` is negative or otherwise nonsensical
+
+Validate externally supplied colors and ratio values where necessary.
+
+## Notes
+
+- The default requested ratio is `4.5`.
+- Compliant foregrounds are returned unchanged.
+- The foreground is the only color adjusted.
+- The adjustment moves toward black or white.
+- The algorithm performs at most 20 shifts.
+- It does not use a perceptual color space.
+- It can be used without constructing a Genome.
+- Verify the result when targets are unusually strict.
+
+## Related APIs
+
+- [`contrastRatio()`](/docs/utilities/contrast-ratio)
+- [Accessible colors](/docs/guides/accessible-colors)
+- [`mutate()`](/docs/core/mutate)

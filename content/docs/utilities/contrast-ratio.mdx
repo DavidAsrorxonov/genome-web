@@ -1,0 +1,255 @@
+---
+title: contrastRatio()
+description: Calculate the contrast ratio between two hexadecimal colors.
+---
+
+`contrastRatio()` calculates the contrast ratio between two hexadecimal colors.
+
+It uses relative luminance and returns a numeric ratio.
+
+## Import
+
+```ts
+import { contrastRatio } from "@genomejs/core";
+```
+
+## Signature
+
+```ts
+contrastRatio(
+  hexA: string,
+  hexB: string,
+): number
+```
+
+## Parameters
+
+| Parameter | Type     | Description              |
+| --------- | -------- | ------------------------ |
+| `hexA`    | `string` | First hexadecimal color  |
+| `hexB`    | `string` | Second hexadecimal color |
+
+Use standard six-digit RGB hexadecimal colors:
+
+```text
+#000000
+#ffffff
+#7c6cff
+```
+
+The leading `#` is accepted.
+
+## Return value
+
+```ts
+number;
+```
+
+The result ranges from approximately:
+
+```text
+1
+```
+
+for identical colors, through:
+
+```text
+21
+```
+
+for black and white.
+
+## Basic example
+
+```ts
+import { contrastRatio } from "@genomejs/core";
+
+const ratio = contrastRatio("#000000", "#ffffff");
+
+console.log(ratio);
+// 21
+```
+
+## Similar colors
+
+```ts
+const ratio = contrastRatio("#777777", "#888888");
+
+console.log(ratio);
+// A low contrast ratio
+```
+
+The order of the colors does not affect the result:
+
+```ts
+contrastRatio("#000000", "#ffffff");
+
+contrastRatio("#ffffff", "#000000");
+```
+
+Both calls return the same ratio.
+
+## Use inside a token
+
+```ts
+import { contrastRatio, Genome } from "@genomejs/core";
+
+const genome = new Genome({
+  primitives: {
+    foreground: "#ffffff",
+    background: "#121620",
+  },
+
+  tokens: {
+    foregroundContrast: (dna) =>
+      contrastRatio(String(dna.foreground), String(dna.background)),
+  },
+});
+```
+
+Read the result:
+
+```ts
+genome.getTrait("foregroundContrast");
+```
+
+Because Genome primitives and tokens support strings and numbers, the numeric ratio can be stored as a resolved token.
+
+## Check a threshold
+
+```ts
+const ratio = contrastRatio(foreground, background);
+
+const passes = ratio >= 4.5;
+```
+
+The threshold your application requires depends on the content, size, weight, and accessibility standard you are applying. GenomeJS calculates the ratio; it does not determine the semantic role of the text or UI element.
+
+## Create an accessibility report
+
+```ts
+const pairs = [
+  {
+    name: "Body text",
+    foreground: "#171923",
+    background: "#ffffff",
+  },
+  {
+    name: "Muted text",
+    foreground: "#667085",
+    background: "#ffffff",
+  },
+];
+
+const report = pairs.map((pair) => ({
+  ...pair,
+
+  ratio: contrastRatio(pair.foreground, pair.background),
+}));
+
+console.table(report);
+```
+
+## Input format
+
+The current implementation parses RGB hexadecimal strings directly.
+
+Use:
+
+```ts
+contrastRatio("#7c6cff", "#121620");
+```
+
+Avoid unsupported formats such as:
+
+```ts
+contrastRatio("rgb(124 108 255)", "#121620");
+```
+
+```ts
+contrastRatio("rebeccapurple", "white");
+```
+
+```ts
+contrastRatio("#fff", "#000");
+```
+
+The current utility does not normalize CSS color names, RGB functions, HSL functions, alpha channels, or short three-digit hex values.
+
+## Invalid values
+
+The current implementation does not explicitly validate its input strings.
+
+Invalid values may produce an incorrect result or `NaN` rather than a descriptive GenomeJS error.
+
+Validate user-provided colors before passing them to the utility.
+
+```ts
+function isSixDigitHex(value: string): boolean {
+  return /^#[0-9a-f]{6}$/i.test(value);
+}
+```
+
+```ts
+if (!isSixDigitHex(foreground) || !isSixDigitHex(background)) {
+  throw new Error("Expected six-digit hexadecimal colors.");
+}
+
+const ratio = contrastRatio(foreground, background);
+```
+
+## Alpha transparency
+
+The utility does not composite transparent colors against a background.
+
+Resolve transparency before calculating contrast.
+
+For example, a partially transparent foreground may produce different visible colors depending on the surface beneath it.
+
+## Relationship to `lockContrast()`
+
+`contrastRatio()` measures a pair:
+
+```ts
+const ratio = contrastRatio(foreground, background);
+```
+
+`lockContrast()` attempts to adjust the foreground toward a requested minimum:
+
+```ts
+const adjusted = lockContrast(foreground, background, 4.5);
+```
+
+Use `contrastRatio()` when you need measurement or reporting.
+
+Use `lockContrast()` when a derived token should adjust itself automatically.
+
+## Error behavior
+
+`contrastRatio()` does not currently throw a dedicated GenomeJS error for malformed color strings.
+
+Possible problems include:
+
+- Unsupported color formats
+- Three- or eight-digit hexadecimal values
+- Alpha transparency
+- Invalid hexadecimal characters
+- Empty strings
+
+Validate external input before calling it.
+
+## Notes
+
+- The return value is a number.
+- Color order does not affect the result.
+- The implementation uses relative luminance.
+- Use six-digit RGB hexadecimal input.
+- The utility does not validate color syntax.
+- It does not account for alpha composition.
+- It can be used independently of a Genome instance.
+
+## Related APIs
+
+- [`lockContrast()`](/docs/utilities/lock-contrast)
+- [Accessible colors](/docs/guides/accessible-colors)
+- [Tokens](/docs/core/tokens)

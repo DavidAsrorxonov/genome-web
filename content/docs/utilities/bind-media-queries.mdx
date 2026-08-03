@@ -1,0 +1,354 @@
+---
+title: bindMediaQueries()
+description: Synchronize system color-scheme and reduced-motion preferences into Genome runtime context.
+---
+
+`bindMediaQueries()` connects two browser media preferences to a Genome instance:
+
+- Preferred color scheme
+- Preferred reduced-motion state
+
+It performs an initial synchronization, listens for later changes, and returns a cleanup function.
+
+## Import
+
+```ts
+import { bindMediaQueries } from "@genomejs/core";
+```
+
+## Signature
+
+```ts
+bindMediaQueries(
+  genome: Genome,
+): () => void
+```
+
+## Parameters
+
+| Parameter | Type     | Description                                                           |
+| --------- | -------- | --------------------------------------------------------------------- |
+| `genome`  | `Genome` | Genome instance whose context should receive media preference changes |
+
+## Return value
+
+```ts
+() => void
+```
+
+Call the returned function to remove both media-query listeners.
+
+## Context values
+
+The binding mutates these exact context keys:
+
+```ts
+{
+  colorScheme:
+    "light" | "dark",
+
+  reducedMotion:
+    boolean,
+}
+```
+
+Your token functions must read those names:
+
+```ts
+const tokens = {
+  surface: (dna, context) =>
+    context.colorScheme === "dark" ? dna.darkSurface : dna.lightSurface,
+
+  transitionDuration: (_dna, context) =>
+    context.reducedMotion ? "0ms" : "180ms",
+};
+```
+
+Using a different key such as `mode` will not receive this binding automatically:
+
+```ts
+context.mode;
+```
+
+The built-in binding writes `colorScheme`, not `mode`.
+
+## Basic example
+
+```ts
+import { bindMediaQueries, Genome } from "@genomejs/core";
+
+const genome = new Genome({
+  primitives: {
+    lightSurface: "#ffffff",
+    darkSurface: "#121620",
+  },
+
+  tokens: {
+    surface: (dna, context) =>
+      context.colorScheme === "dark" ? dna.darkSurface : dna.lightSurface,
+
+    transitionDuration: (_dna, context) =>
+      context.reducedMotion ? "0ms" : "180ms",
+  },
+});
+
+const cleanup = bindMediaQueries(genome);
+```
+
+After binding, the Genome context is immediately mutated with the current preferences.
+
+Later browser preference changes trigger another mutation.
+
+## Cleanup
+
+```ts
+const cleanup = bindMediaQueries(genome);
+
+// Later
+cleanup();
+```
+
+The cleanup removes listeners from both `MediaQueryList` objects.
+
+Always clean up bindings associated with components, temporary views, or discarded Genome instances.
+
+## React example
+
+```tsx
+"use client";
+
+import { useEffect } from "react";
+import { bindMediaQueries } from "@genomejs/core";
+
+import { themeGenome } from "@/lib/theme-genome";
+
+export function MediaPreferenceBinding() {
+  useEffect(() => {
+    return bindMediaQueries(themeGenome);
+  }, []);
+
+  return null;
+}
+```
+
+Because `bindMediaQueries()` returns its cleanup function, it can be returned directly from `useEffect()`.
+
+## Vue example
+
+```vue
+<script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
+
+import { bindMediaQueries } from "@genomejs/core";
+
+import { themeGenome } from "@/lib/theme-genome";
+
+let cleanup: (() => void) | undefined;
+
+onMounted(() => {
+  cleanup = bindMediaQueries(themeGenome);
+});
+
+onUnmounted(() => {
+  cleanup?.();
+});
+</script>
+```
+
+## Svelte example
+
+```svelte
+<script lang="ts">
+  import {
+    onMount,
+  } from "svelte";
+
+  import {
+    bindMediaQueries,
+  } from "@genomejs/core";
+
+  import {
+    themeGenome,
+  } from "$lib/theme-genome";
+
+  onMount(() => {
+    return bindMediaQueries(
+      themeGenome,
+    );
+  });
+</script>
+```
+
+## Browser-only API
+
+`bindMediaQueries()` accesses:
+
+```ts
+window.matchMedia(...)
+```
+
+Call it only in a browser environment.
+
+Do not call it during server rendering:
+
+```ts
+const cleanup = bindMediaQueries(genome);
+```
+
+unless execution is already guarded by a browser-only lifecycle.
+
+In Next.js, use a Client Component effect.
+
+In Vue and Svelte, use mount lifecycle APIs.
+
+## Initial server context
+
+When server rendering, choose an explicit initial context that produces stable output:
+
+```ts
+genome.mutate({
+  colorScheme: "light",
+  reducedMotion: false,
+});
+```
+
+Then bind browser preferences after mounting:
+
+```ts
+bindMediaQueries(genome);
+```
+
+Be aware that the browser preference may differ from the server default, causing the interface to update after hydration.
+
+## Media queries used
+
+The current binding creates:
+
+```css
+(prefers-color-scheme: dark)
+```
+
+and:
+
+```css
+(prefers-reduced-motion)
+```
+
+It derives:
+
+```ts
+colorScheme = darkModeQuery.matches ? "dark" : "light";
+```
+
+And:
+
+```ts
+reducedMotion = reducedMotionQuery.matches;
+```
+
+## Interaction with manual mutations
+
+Because the binding writes `colorScheme` and `reducedMotion`, a manual mutation can temporarily overwrite them:
+
+```ts
+genome.mutate({
+  colorScheme: "light",
+});
+```
+
+The next media-query change will synchronize the system value again.
+
+For an application with both system and user-selected modes, keep them as separate context properties:
+
+```ts
+{
+  systemColorScheme:
+    "light" | "dark",
+
+  selectedColorScheme:
+    "system" | "light" | "dark",
+}
+```
+
+The current built-in helper does not implement that distinction itself. It always writes `colorScheme`.
+
+A custom binding may be clearer when the application supports persistent user overrides.
+
+## Example with an application override
+
+```ts
+const tokens = {
+  effectiveColorScheme: (_dna, context) => {
+    if (context.selectedColorScheme === "dark") {
+      return "dark";
+    }
+
+    if (context.selectedColorScheme === "light") {
+      return "light";
+    }
+
+    return context.colorScheme === "dark" ? "dark" : "light";
+  },
+};
+```
+
+The built-in binding controls `colorScheme`, while the application controls `selectedColorScheme`.
+
+## Testing
+
+In tests, provide a `matchMedia` implementation before calling the binding.
+
+```ts
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+
+  value: (query: string) => ({
+    media: query,
+    matches: false,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent() {
+      return false;
+    },
+  }),
+});
+```
+
+The GenomeJS test suite verifies:
+
+- Immediate initial synchronization
+- Color-scheme updates
+- Reduced-motion state
+- Removal of both listeners during cleanup
+
+## Error behavior
+
+The function may throw when:
+
+- `window` is unavailable
+- `window.matchMedia` is unavailable
+- A Genome token throws while handling the initial mutation
+- A Genome token throws during a later media-query change
+- A subscriber throws during mutation
+
+The utility does not silently fall back on unsupported platforms.
+
+## Notes
+
+- The utility is browser-only.
+- It performs an immediate initial mutation.
+- It writes `colorScheme` and `reducedMotion`.
+- `colorScheme` is `"light"` or `"dark"`.
+- `reducedMotion` is a boolean.
+- It listens for changes to both media queries.
+- Its return value removes both listeners.
+- It does not manage user-selected theme overrides.
+
+## Related APIs
+
+- [`mutate()`](/docs/core/mutate)
+- [Dark mode](/docs/guides/dark-mode)
+- [`bindContainerSize()`](/docs/utilities/bind-container-size)

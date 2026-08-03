@@ -1,0 +1,305 @@
+---
+title: fluidScale()
+description: Generate a CSS clamp() expression that scales linearly between two pixel sizes.
+---
+
+`fluidScale()` creates a CSS `clamp()` expression that interpolates linearly between a minimum and maximum pixel value across a viewport range.
+
+Despite its typography-focused source description, the returned expression can be used anywhere a CSS length is appropriate.
+
+## Import
+
+```ts
+import { fluidScale } from "@genomejs/core";
+```
+
+## Signature
+
+```ts
+fluidScale(
+  minPx: number,
+  maxPx: number,
+  minVw?: number,
+  maxVw?: number,
+): string
+```
+
+## Parameters
+
+| Parameter | Type     | Default | Description                               |
+| --------- | -------- | ------- | ----------------------------------------- |
+| `minPx`   | `number` | —       | Minimum output size in pixels             |
+| `maxPx`   | `number` | —       | Maximum output size in pixels             |
+| `minVw`   | `number` | `320`   | Viewport width where interpolation begins |
+| `maxVw`   | `number` | `1440`  | Viewport width where interpolation ends   |
+
+## Return value
+
+```ts
+string;
+```
+
+The returned value is a CSS `clamp()` expression.
+
+## Basic example
+
+```ts
+import { fluidScale } from "@genomejs/core";
+
+const headingSize = fluidScale(32, 64);
+
+console.log(headingSize);
+```
+
+The result has this shape:
+
+```css
+clamp(
+  32px,
+  <intercept>px + <slope>vw,
+  64px
+)
+```
+
+Use it in CSS:
+
+```ts
+document.documentElement.style.setProperty("--heading-size", headingSize);
+```
+
+```css
+h1 {
+  font-size: var(--heading-size);
+}
+```
+
+## Exact custom-range example
+
+```ts
+fluidScale(16, 32, 400, 1200);
+```
+
+Returns:
+
+```css
+clamp(
+  16px,
+  8.0000px + 2.0000vw,
+  32px
+)
+```
+
+This exact output is covered by the Core tests.
+
+## Use in a Genome token
+
+```ts
+import { fluidScale, Genome } from "@genomejs/core";
+
+const genome = new Genome({
+  primitives: {
+    headingMin: 32,
+    headingMax: 64,
+  },
+
+  tokens: {
+    headingSize: (dna) =>
+      fluidScale(Number(dna.headingMin), Number(dna.headingMax)),
+  },
+});
+```
+
+GenomeJS expresses:
+
+```css
+--g-heading-size: clamp(32px, ...px + ...vw, 64px);
+```
+
+Consume it normally:
+
+```css
+.page-title {
+  font-size: var(--g-heading-size);
+}
+```
+
+## Responsive spacing
+
+The function can also create fluid spacing values:
+
+```ts
+const tokens = {
+  pagePadding: () => fluidScale(16, 48, 320, 1280),
+};
+```
+
+```css
+.page {
+  padding-inline: var(--g-page-padding);
+}
+```
+
+## Responsive radius
+
+```ts
+const tokens = {
+  panelRadius: () => fluidScale(12, 24, 320, 1440),
+};
+```
+
+```css
+.panel {
+  border-radius: var(--g-panel-radius);
+}
+```
+
+Use fluid values only where continuous interpolation benefits the interface. Not every token needs to change with viewport width.
+
+## How the expression is calculated
+
+The utility calculates a straight line:
+
+```text
+value = slope × viewport + intercept
+```
+
+Where:
+
+```ts
+const slope = (maxPx - minPx) / (maxVw - minVw);
+```
+
+And:
+
+```ts
+const intercept = minPx - slope * minVw;
+```
+
+It then returns:
+
+```css
+clamp(
+  minPx,
+  intercept + slope-in-vw,
+  maxPx
+)
+```
+
+The middle expression equals `minPx` at `minVw` and `maxPx` at `maxVw`, subject to the four-decimal string rounding used in the generated expression.
+
+## Defaults
+
+These calls are equivalent:
+
+```ts
+fluidScale(16, 32);
+```
+
+```ts
+fluidScale(16, 32, 320, 1440);
+```
+
+## Input requirements
+
+Use a viewport range where:
+
+```text
+maxVw > minVw
+```
+
+And, for ordinary increasing scales:
+
+```text
+maxPx >= minPx
+```
+
+The current implementation does not validate these relationships.
+
+## Equal viewport bounds
+
+Avoid:
+
+```ts
+fluidScale(16, 32, 640, 640);
+```
+
+The calculation divides by:
+
+```ts
+maxVw - minVw;
+```
+
+Equal viewport bounds produce invalid numeric output.
+
+## Reversed ranges
+
+This is accepted by JavaScript:
+
+```ts
+fluidScale(32, 16, 320, 1440);
+```
+
+But the resulting `clamp()` bounds may not behave as intended because CSS expects the first argument to act as the lower bound and the last as the upper bound.
+
+Validate configuration before generation.
+
+```ts
+function createFluidScale(
+  minPx: number,
+  maxPx: number,
+  minVw: number,
+  maxVw: number,
+): string {
+  if (maxPx < minPx) {
+    throw new Error("maxPx must be at least minPx.");
+  }
+
+  if (maxVw <= minVw) {
+    throw new Error("maxVw must be greater than minVw.");
+  }
+
+  return fluidScale(minPx, maxPx, minVw, maxVw);
+}
+```
+
+## Pixel-only output
+
+The utility accepts numeric pixel values and generates `px` and `vw` units.
+
+It does not currently generate:
+
+- `rem`
+- `em`
+- Container-query units
+- Percentages
+- Custom unit combinations
+
+For rem-based systems, either convert values before calling the function or implement a project-specific helper.
+
+## Error behavior
+
+`fluidScale()` does not currently throw dedicated errors for:
+
+- Equal viewport bounds
+- Reversed viewport bounds
+- Reversed size bounds
+- Non-finite values
+- Negative values
+
+Validate dynamic or user-provided input before calling it.
+
+## Notes
+
+- The default viewport range is `320px` to `1440px`.
+- The return value is a CSS `clamp()` string.
+- The preferred expression uses `px + vw`.
+- Numeric coefficients are formatted to four decimal places.
+- It can generate typography, spacing, or other CSS lengths.
+- Input relationships are not validated automatically.
+- It does not require a Genome instance.
+
+## Related APIs
+
+- [Responsive tokens](/docs/guides/responsive-tokens)
+- [Tokens](/docs/core/tokens)
+- [`bindContainerSize()`](/docs/utilities/bind-container-size)
