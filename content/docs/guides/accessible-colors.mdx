@@ -1,0 +1,329 @@
+---
+title: Accessible Colors
+description: Measure and adjust dynamic foreground colors with GenomeJS contrast utilities.
+---
+
+Dynamic themes can create color combinations that were not selected manually.
+
+GenomeJS provides two utilities:
+
+```ts
+contrastRatio();
+lockContrast();
+```
+
+Use `contrastRatio()` to measure a pair.
+
+Use `lockContrast()` to adjust a foreground toward a requested ratio.
+
+## Measure a color pair
+
+```ts
+import { contrastRatio } from "@genomejs/core";
+
+const ratio = contrastRatio("#171923", "#ffffff");
+
+console.log(ratio);
+```
+
+The result is a number.
+
+The utility does not determine which threshold applies to the UI element. Your application still needs to decide the target appropriate for its content.
+
+## Validate color input
+
+The current utilities are designed around six-digit RGB hexadecimal strings.
+
+```ts
+function assertHexColor(value: string): void {
+  if (!/^#[0-9a-f]{6}$/i.test(value)) {
+    throw new Error(`Expected a six-digit hex color. Received: ${value}`);
+  }
+}
+```
+
+Use it for external or user-provided values:
+
+```ts
+assertHexColor(foreground);
+
+assertHexColor(background);
+
+const ratio = contrastRatio(foreground, background);
+```
+
+Do not assume the utility normalizes:
+
+```text
+#fff
+rgb(...)
+hsl(...)
+named colors
+alpha hex
+transparent colors
+```
+
+## Adjust a foreground
+
+```ts
+import { lockContrast } from "@genomejs/core";
+
+const foreground = lockContrast("#777777", "#888888", 4.5);
+```
+
+The function:
+
+1. Returns the original foreground when it already passes
+2. Chooses whether black or white offers a better direction
+3. Shifts the foreground toward that direction
+4. Tests the ratio again
+5. Stops after the target passes or after 20 iterations
+
+The algorithm adjusts RGB channels directly. It is a practical contrast helper, not a perceptual color-space optimizer.
+
+## Create a dynamic foreground token
+
+```ts
+import { Genome, lockContrast } from "@genomejs/core";
+
+export const colorGenome = new Genome({
+  primitives: {
+    lightSurface: "#ffffff",
+    darkSurface: "#121620",
+
+    preferredForeground: "#7c6cff",
+  },
+
+  tokens: {
+    surface: (dna, context) =>
+      context.mode === "dark" ? dna.darkSurface : dna.lightSurface,
+
+    foreground: (dna, context) => {
+      const target = context.contrast === "high" ? 7 : 4.5;
+
+      return lockContrast(
+        String(dna.preferredForeground),
+        String(dna.surface),
+        target,
+      );
+    },
+  },
+});
+
+colorGenome.mutate({
+  mode: "light",
+  contrast: "standard",
+});
+```
+
+Dependency graph:
+
+```text
+lightSurface ──┐
+darkSurface ───┴──→ surface
+                         ↓
+preferredForeground ─→ foreground
+```
+
+When mode changes, `surface` resolves again. Because `foreground` reads `surface`, it resolves afterward.
+
+## Add a contrast preference
+
+```ts
+colorGenome.mutate({
+  contrast: "high",
+});
+```
+
+The foreground token then requests:
+
+```text
+7
+```
+
+instead of:
+
+```text
+4.5
+```
+
+GenomeJS does not reserve the values `standard` or `high`. They are application-defined context values.
+
+## Verify the achieved result
+
+`lockContrast()` does not throw when an unusually strict target remains unmet after its iteration limit.
+
+Measure the final pair when correctness matters:
+
+```ts
+import { contrastRatio, lockContrast } from "@genomejs/core";
+
+function accessibleForeground(
+  foreground: string,
+  background: string,
+  target: number,
+): string {
+  assertHexColor(foreground);
+
+  assertHexColor(background);
+
+  const adjusted = lockContrast(foreground, background, target);
+
+  const achieved = contrastRatio(adjusted, background);
+
+  if (achieved < target) {
+    console.warn(
+      `Requested ratio ${target} was not reached. Achieved ${achieved.toFixed(2)}.`,
+    );
+  }
+
+  return adjusted;
+}
+```
+
+Use the helper in a token:
+
+```ts
+const tokens = {
+  foreground: (dna, context) =>
+    accessibleForeground(
+      String(dna.preferredForeground),
+      String(dna.surface),
+      context.contrast === "high" ? 7 : 4.5,
+    ),
+};
+```
+
+## Preserve semantic colors
+
+Automatic adjustment should not be the only design strategy.
+
+For important semantic colors, provide approved alternatives:
+
+```ts
+const primitives = {
+  lightDanger: "#b42318",
+  darkDanger: "#ffb4ab",
+
+  lightSuccess: "#067647",
+  darkSuccess: "#75e0a7",
+};
+```
+
+Select the approved value based on mode:
+
+```ts
+const tokens = {
+  danger: (dna, context) =>
+    context.mode === "dark" ? dna.darkDanger : dna.lightDanger,
+
+  success: (dna, context) =>
+    context.mode === "dark" ? dna.darkSuccess : dna.lightSuccess,
+};
+```
+
+Then measure those pairs during testing.
+
+`lockContrast()` is especially useful when a user or runtime value cannot be fully predetermined.
+
+## Test token combinations
+
+```ts
+const modes = ["light", "dark"] as const;
+
+const contrasts = ["standard", "high"] as const;
+
+for (const mode of modes) {
+  for (const contrast of contrasts) {
+    colorGenome.mutate({
+      mode,
+      contrast,
+    });
+
+    const foreground = String(colorGenome.getTrait("foreground"));
+
+    const surface = String(colorGenome.getTrait("surface"));
+
+    console.log({
+      mode,
+      contrast,
+
+      ratio: contrastRatio(foreground, surface),
+    });
+  }
+}
+```
+
+This tests every context combination rather than only the default state.
+
+## Transparency
+
+Contrast depends on the final composited visible color.
+
+The current helper does not composite transparency.
+
+Avoid passing:
+
+```text
+#ffffff80
+```
+
+Resolve the visible color against the underlying surface before measuring it.
+
+## React example
+
+```tsx
+"use client";
+
+import { useGenomeTrait } from "@genomejs/react";
+
+import { colorGenome } from "@/lib/color-genome";
+
+export function ContrastControl() {
+  const foreground = useGenomeTrait(colorGenome, "foreground");
+
+  const surface = useGenomeTrait(colorGenome, "surface");
+
+  return (
+    <section
+      style={{
+        color: String(foreground),
+
+        backgroundColor: String(surface),
+
+        padding: "24px",
+      }}
+    >
+      <p>This foreground responds to the current surface.</p>
+
+      <button
+        type="button"
+        onClick={() => {
+          colorGenome.mutate({
+            contrast: "high",
+          });
+        }}
+      >
+        Use high contrast
+      </button>
+    </section>
+  );
+}
+```
+
+## What can go wrong?
+
+- Passing unsupported color formats
+- Ignoring transparency
+- Assuming `lockContrast()` preserves hue exactly
+- Requesting an impossible or unusually strict ratio without verifying it
+- Treating one ratio target as correct for every component
+- Adjusting semantic brand colors without design review
+- Testing only one theme mode
+
+## Related APIs
+
+- [`contrastRatio()`](/docs/utilities/contrast-ratio)
+- [`lockContrast()`](/docs/utilities/lock-contrast)
+- [Dark Mode](/docs/guides/dark-mode)
+- [Building a Complete Theme](/docs/guides/building-a-complete-theme)

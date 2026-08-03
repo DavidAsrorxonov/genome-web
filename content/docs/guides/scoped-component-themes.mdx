@@ -1,0 +1,361 @@
+---
+title: Scoped Component Themes
+description: Create independent component-level theme contexts and CSS output with Genome scopes.
+---
+
+A scoped Genome uses the parent’s token configuration but writes values onto another element.
+
+```ts
+const child = parent.scope(target, overrides);
+```
+
+This allows one component subtree to use another mode, density, scale, or container state.
+
+## Create the parent theme
+
+```ts
+import { Genome } from "@genomejs/core";
+
+export const appGenome = new Genome({
+  primitives: {
+    lightSurface: "#ffffff",
+    darkSurface: "#121620",
+
+    lightForeground: "#171923",
+    darkForeground: "#f7f8fb",
+
+    comfortableGap: "20px",
+    compactGap: "12px",
+
+    comfortableRadius: "18px",
+    compactRadius: "10px",
+  },
+
+  tokens: {
+    surface: (dna, context) =>
+      context.mode === "dark" ? dna.darkSurface : dna.lightSurface,
+
+    foreground: (dna, context) =>
+      context.mode === "dark" ? dna.darkForeground : dna.lightForeground,
+
+    gap: (dna, context) =>
+      context.density === "compact" ? dna.compactGap : dna.comfortableGap,
+
+    radius: (dna, context) =>
+      context.density === "compact" ? dna.compactRadius : dna.comfortableRadius,
+  },
+});
+
+appGenome.mutate({
+  mode: "light",
+  density: "comfortable",
+});
+```
+
+## Create a dark compact panel
+
+```ts
+const panel = document.querySelector<HTMLElement>("[data-inspector]");
+
+if (!panel) {
+  throw new Error("Inspector was not found.");
+}
+
+const inspectorGenome = appGenome.scope(panel, {
+  mode: "dark",
+  density: "compact",
+});
+```
+
+The page may remain light while the panel becomes dark and compact.
+
+## CSS custom-property inheritance
+
+The scoped instance writes properties directly onto the panel:
+
+```html
+<aside
+  data-inspector
+  style="
+    --g-surface: #121620;
+    --g-foreground: #f7f8fb;
+    --g-gap: 12px;
+    --g-radius: 10px;
+  "
+>
+  ...
+</aside>
+```
+
+Descendants inherit those custom properties:
+
+```css
+[data-inspector] {
+  color: var(--g-foreground);
+
+  background: var(--g-surface);
+
+  border-radius: var(--g-radius);
+}
+
+[data-inspector] .toolbar {
+  display: flex;
+  gap: var(--g-gap);
+}
+```
+
+## Initial parent context inheritance
+
+Before creating the scope:
+
+```ts
+appGenome.mutate({
+  mode: "light",
+  density: "comfortable",
+  scale: 1.125,
+});
+```
+
+Then create a child with only one override:
+
+```ts
+const child = appGenome.scope(panel, {
+  density: "compact",
+});
+```
+
+The child begins conceptually with:
+
+```ts
+{
+  mode: "light",
+  density: "compact",
+  scale: 1.125,
+}
+```
+
+The overrides win over the parent’s current values.
+
+## Parent and child are independent afterward
+
+This mutation:
+
+```ts
+appGenome.mutate({
+  mode: "dark",
+});
+```
+
+does not automatically mutate an already-created child.
+
+Likewise:
+
+```ts
+child.mutate({
+  mode: "light",
+});
+```
+
+does not change the parent.
+
+A scope copies the parent’s current context during creation. It is not a live inheritance relationship.
+
+## Explicit synchronization
+
+When a child should continue following selected parent values, synchronize them explicitly.
+
+```ts
+let currentAppMode: "light" | "dark" = "light";
+
+function updateAppMode(mode: "light" | "dark") {
+  currentAppMode = mode;
+
+  appGenome.mutate({
+    mode,
+  });
+
+  child.mutate({
+    mode,
+  });
+}
+```
+
+Or subscribe to the parent:
+
+```ts
+const unsubscribeParent = appGenome.subscribe(() => {
+  const mode = appGenome.getTrait("effectiveMode");
+
+  child.mutate({
+    mode,
+  });
+});
+```
+
+This requires a token such as `effectiveMode` that exposes the resolved mode.
+
+Call the cleanup when synchronization is no longer needed:
+
+```ts
+unsubscribeParent();
+```
+
+Be careful not to create mutation cycles between parent and child subscriptions.
+
+## Multiple component themes
+
+```ts
+const sidebarGenome = appGenome.scope(sidebarElement, {
+  density: "compact",
+});
+
+const dialogGenome = appGenome.scope(dialogElement, {
+  mode: "dark",
+  density: "comfortable",
+});
+
+const dashboardGenome = appGenome.scope(dashboardElement, {
+  scale: 1.125,
+});
+```
+
+Each scope:
+
+- Has its own target
+- Has its own context
+- Has its own resolved DNA
+- Has its own subscribers
+- Uses the same token configuration
+
+## React component
+
+```tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import type { Genome } from "@genomejs/core";
+
+import { appGenome } from "@/lib/app-genome";
+
+export function Inspector() {
+  const elementRef = useRef<HTMLElement | null>(null);
+
+  const genomeRef = useRef<Genome | null>(null);
+
+  useEffect(() => {
+    const element = elementRef.current;
+
+    if (!element) {
+      return;
+    }
+
+    genomeRef.current = appGenome.scope(element, {
+      mode: "dark",
+      density: "compact",
+    });
+
+    return () => {
+      genomeRef.current = null;
+    };
+  }, []);
+
+  function toggleDensity() {
+    genomeRef.current?.mutate({
+      density: "comfortable",
+    });
+  }
+
+  return (
+    <aside ref={elementRef} data-inspector>
+      <button type="button" onClick={toggleDensity}>
+        Comfortable density
+      </button>
+    </aside>
+  );
+}
+```
+
+The current API has no dedicated:
+
+```ts
+genome.destroy();
+```
+
+method.
+
+Clean up external subscriptions and browser bindings created for the child.
+
+## Combine scope with container size
+
+```ts
+import { bindContainerSize } from "@genomejs/core";
+
+const componentGenome = appGenome.scope(componentElement, {
+  density: "compact",
+});
+
+const cleanupSize = bindContainerSize(componentGenome, componentElement);
+```
+
+The child now has:
+
+- Component-specific theme context
+- Component-specific container width
+- Component-specific CSS output
+
+Cleanup:
+
+```ts
+cleanupSize();
+```
+
+## Nested scopes
+
+A scoped Genome is still a Genome instance.
+
+It can create another scope:
+
+```ts
+const panelGenome = appGenome.scope(panelElement, {
+  mode: "dark",
+});
+
+const toolbarGenome = panelGenome.scope(toolbarElement, {
+  density: "compact",
+});
+```
+
+The nested scope starts from the panel’s current context at creation time.
+
+It still becomes independent afterward.
+
+## Choose the target carefully
+
+Scoped CSS properties cascade to descendants.
+
+Use the smallest element that should own the override:
+
+```text
+Page root
+└── Dialog target
+    └── Dialog content
+```
+
+Do not target an ancestor that unintentionally changes unrelated components.
+
+## What can go wrong?
+
+- Expecting future parent mutations to propagate automatically
+- Forgetting cleanup for child subscriptions or observers
+- Creating parent-child mutation loops
+- Targeting too large a DOM subtree
+- Calling `scope()` before the element exists
+- Calling `scope()` during SSR
+- Binding multiple containers to one child instance
+
+## Related APIs
+
+- [`scope()`](/docs/core/scope)
+- [`bindContainerSize()`](/docs/utilities/bind-container-size)
+- [Container-Aware Components](/docs/guides/container-aware-components)
+- [Building a Complete Theme](/docs/guides/building-a-complete-theme)

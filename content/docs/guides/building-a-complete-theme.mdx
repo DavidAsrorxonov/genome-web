@@ -1,0 +1,655 @@
+---
+title: Building a Complete Theme
+description: Combine primitives, derived tokens, runtime context, accessibility, responsive values, framework bindings, and CSS output.
+---
+
+This guide combines the main GenomeJS features into one application theme.
+
+The theme includes:
+
+- Light and dark modes
+- System and explicit mode selection
+- Standard and high contrast
+- Comfortable and compact density
+- User-controlled scale
+- Fluid typography
+- Reduced-motion support
+- CSS custom-property output
+- React subscriptions
+
+## Theme context
+
+Create:
+
+```text
+lib/theme/types.ts
+```
+
+```ts
+export type ThemeMode = "system" | "light" | "dark";
+
+export type ThemeContrast = "standard" | "high";
+
+export type ThemeDensity = "comfortable" | "compact";
+
+export interface ThemeContext {
+  colorScheme: "light" | "dark";
+
+  selectedMode: ThemeMode;
+
+  contrast: ThemeContrast;
+
+  density: ThemeDensity;
+
+  scale: number;
+
+  reducedMotion: boolean;
+}
+```
+
+GenomeJS runtime context remains an open record. These application types document the values your token functions expect.
+
+## Initial context
+
+Create:
+
+```text
+lib/theme/initial-context.ts
+```
+
+```ts
+import type { ThemeContext } from "./types";
+
+export const initialThemeContext: ThemeContext = {
+  colorScheme: "light",
+  selectedMode: "system",
+  contrast: "standard",
+  density: "comfortable",
+  scale: 1,
+  reducedMotion: false,
+};
+```
+
+## Theme Genome
+
+Create:
+
+```text
+lib/theme/theme-genome.ts
+```
+
+```ts
+import {
+  fluidScale,
+  Genome,
+  lockContrast,
+  type GenomeConfig,
+  type RuntimeContext,
+} from "@genomejs/core";
+
+import { initialThemeContext } from "./initial-context";
+import type { ThemeContrast, ThemeDensity, ThemeMode } from "./types";
+
+function readSelectedMode(context: RuntimeContext): ThemeMode {
+  if (context.selectedMode === "light" || context.selectedMode === "dark") {
+    return context.selectedMode;
+  }
+
+  return "system";
+}
+
+function readSystemMode(context: RuntimeContext): "light" | "dark" {
+  return context.colorScheme === "dark" ? "dark" : "light";
+}
+
+function readContrast(context: RuntimeContext): ThemeContrast {
+  return context.contrast === "high" ? "high" : "standard";
+}
+
+function readDensity(context: RuntimeContext): ThemeDensity {
+  return context.density === "compact" ? "compact" : "comfortable";
+}
+
+function readScale(context: RuntimeContext): number {
+  return typeof context.scale === "number" &&
+    Number.isFinite(context.scale) &&
+    context.scale > 0
+    ? context.scale
+    : 1;
+}
+
+export const themeConfig = {
+  primitives: {
+    lightBackground: "#ffffff",
+    lightSurface: "#f7f8fb",
+    lightForeground: "#171923",
+    lightMutedForeground: "#667085",
+
+    darkBackground: "#0c0f16",
+    darkSurface: "#121620",
+    darkForeground: "#f7f8fb",
+    darkMutedForeground: "#a5adbd",
+
+    brand: "#7c6cff",
+
+    destructiveLight: "#b42318",
+    destructiveDark: "#ffb4ab",
+
+    baseSpacing: 16,
+    baseRadius: 14,
+
+    compactControlHeight: 36,
+    comfortableControlHeight: 44,
+  },
+
+  tokens: {
+    effectiveMode: (_dna, context) => {
+      const selected = readSelectedMode(context);
+
+      if (selected === "light" || selected === "dark") {
+        return selected;
+      }
+
+      return readSystemMode(context);
+    },
+
+    background: (dna) =>
+      dna.effectiveMode === "dark" ? dna.darkBackground : dna.lightBackground,
+
+    surface: (dna) =>
+      dna.effectiveMode === "dark" ? dna.darkSurface : dna.lightSurface,
+
+    foreground: (dna, context) => {
+      const preferred =
+        dna.effectiveMode === "dark"
+          ? String(dna.darkForeground)
+          : String(dna.lightForeground);
+
+      const target = readContrast(context) === "high" ? 7 : 4.5;
+
+      return lockContrast(preferred, String(dna.background), target);
+    },
+
+    mutedForeground: (dna, context) => {
+      const preferred =
+        dna.effectiveMode === "dark"
+          ? String(dna.darkMutedForeground)
+          : String(dna.lightMutedForeground);
+
+      const target = readContrast(context) === "high" ? 7 : 4.5;
+
+      return lockContrast(preferred, String(dna.surface), target);
+    },
+
+    primary: (dna) => dna.brand,
+
+    destructive: (dna) =>
+      dna.effectiveMode === "dark" ? dna.destructiveDark : dna.destructiveLight,
+
+    spacing: (dna, context) =>
+      `${Number(dna.baseSpacing) * readScale(context)}px`,
+
+    radius: (dna, context) => {
+      const densityFactor = readDensity(context) === "compact" ? 0.75 : 1;
+
+      return `${Number(dna.baseRadius) * readScale(context) * densityFactor}px`;
+    },
+
+    controlHeight: (dna, context) =>
+      `${
+        readDensity(context) === "compact"
+          ? dna.compactControlHeight
+          : dna.comfortableControlHeight
+      }px`,
+
+    bodySize: () => fluidScale(16, 18, 320, 1440),
+
+    headingSize: () => fluidScale(36, 72, 320, 1440),
+
+    transitionDuration: (_dna, context) =>
+      context.reducedMotion ? "0ms" : "180ms",
+  },
+} satisfies GenomeConfig;
+
+export const themeGenome = new Genome(themeConfig);
+
+themeGenome.mutate({
+  ...initialThemeContext,
+});
+```
+
+## Why `effectiveMode` is a token
+
+`effectiveMode` combines:
+
+```text
+System color scheme
+User selection
+```
+
+Other tokens depend on the resolved result:
+
+```text
+effectiveMode
+├── background
+├── surface
+├── foreground
+├── mutedForeground
+└── destructive
+```
+
+This keeps the precedence logic in one place.
+
+## Browser environment binding
+
+Create:
+
+```text
+components/theme-environment.tsx
+```
+
+```tsx
+"use client";
+
+import { useEffect } from "react";
+import { bindMediaQueries } from "@genomejs/core";
+
+import { themeGenome } from "@/lib/theme/theme-genome";
+
+export function ThemeEnvironment() {
+  useEffect(() => {
+    return bindMediaQueries(themeGenome);
+  }, []);
+
+  return null;
+}
+```
+
+The built-in binding keeps these values synchronized:
+
+```ts
+colorScheme;
+reducedMotion;
+```
+
+## Theme controls
+
+Create:
+
+```text
+components/theme-controls.tsx
+```
+
+```tsx
+"use client";
+
+import { useGenomeTrait } from "@genomejs/react";
+
+import { themeGenome } from "@/lib/theme/theme-genome";
+import type { ThemeContrast, ThemeDensity, ThemeMode } from "@/lib/theme/types";
+
+export function ThemeControls() {
+  const effectiveMode = useGenomeTrait(themeGenome, "effectiveMode");
+
+  const spacing = useGenomeTrait(themeGenome, "spacing");
+
+  function setMode(selectedMode: ThemeMode) {
+    themeGenome.mutate({
+      selectedMode,
+    });
+  }
+
+  function setContrast(contrast: ThemeContrast) {
+    themeGenome.mutate({
+      contrast,
+    });
+  }
+
+  function setDensity(density: ThemeDensity) {
+    themeGenome.mutate({
+      density,
+    });
+  }
+
+  function setScale(scale: number) {
+    themeGenome.mutate({
+      scale,
+    });
+  }
+
+  return (
+    <section>
+      <p>Effective mode: {effectiveMode}</p>
+
+      <p>Current spacing: {spacing}</p>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => {
+            setMode("system");
+          }}
+        >
+          System
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMode("light");
+          }}
+        >
+          Light
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMode("dark");
+          }}
+        >
+          Dark
+        </button>
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => {
+            setContrast("standard");
+          }}
+        >
+          Standard contrast
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setContrast("high");
+          }}
+        >
+          High contrast
+        </button>
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => {
+            setDensity("comfortable");
+          }}
+        >
+          Comfortable
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setDensity("compact");
+          }}
+        >
+          Compact
+        </button>
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => {
+            setScale(1);
+          }}
+        >
+          100%
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setScale(1.125);
+          }}
+        >
+          112.5%
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setScale(1.25);
+          }}
+        >
+          125%
+        </button>
+      </div>
+    </section>
+  );
+}
+```
+
+## CSS bridge
+
+Use the generated properties directly:
+
+```css
+:root {
+  --g-background: #ffffff;
+  --g-surface: #f7f8fb;
+  --g-foreground: #171923;
+  --g-muted-foreground: #667085;
+  --g-primary: #7c6cff;
+  --g-spacing: 16px;
+  --g-radius: 14px;
+  --g-control-height: 44px;
+  --g-body-size: 16px;
+  --g-heading-size: 36px;
+  --g-transition-duration: 180ms;
+}
+
+body {
+  margin: 0;
+
+  background: var(--g-background);
+
+  color: var(--g-foreground);
+
+  font-size: var(--g-body-size);
+
+  transition:
+    background-color var(--g-transition-duration),
+    color var(--g-transition-duration);
+}
+
+h1 {
+  font-size: var(--g-heading-size);
+}
+
+.card {
+  display: grid;
+
+  gap: var(--g-spacing);
+
+  padding: var(--g-spacing);
+
+  border-radius: var(--g-radius);
+
+  background: var(--g-surface);
+
+  color: var(--g-foreground);
+}
+
+.control {
+  min-height: var(--g-control-height);
+
+  border-radius: var(--g-radius);
+
+  background: var(--g-primary);
+}
+```
+
+The fallback `:root` variables provide usable values before browser-side expression occurs.
+
+When GenomeJS writes inline values, the generated values override the fallback declarations.
+
+## Render the environment binding
+
+```tsx
+import { ThemeEnvironment } from "@/components/theme-environment";
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body>
+        <ThemeEnvironment />
+
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+## Add a component scope
+
+```tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import type { Genome } from "@genomejs/core";
+
+import { themeGenome } from "@/lib/theme/theme-genome";
+
+export function CompactPanel() {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  const scopedRef = useRef<Genome | null>(null);
+
+  useEffect(() => {
+    const element = panelRef.current;
+
+    if (!element) {
+      return;
+    }
+
+    scopedRef.current = themeGenome.scope(element, {
+      density: "compact",
+    });
+
+    return () => {
+      scopedRef.current = null;
+    };
+  }, []);
+
+  return (
+    <div ref={panelRef} className="card">
+      Compact scoped panel
+    </div>
+  );
+}
+```
+
+## Validate contrast in tests
+
+```ts
+import { contrastRatio } from "@genomejs/core";
+
+const combinations = [
+  {
+    selectedMode: "light",
+    contrast: "standard",
+    minimum: 4.5,
+  },
+  {
+    selectedMode: "dark",
+    contrast: "standard",
+    minimum: 4.5,
+  },
+  {
+    selectedMode: "light",
+    contrast: "high",
+    minimum: 7,
+  },
+  {
+    selectedMode: "dark",
+    contrast: "high",
+    minimum: 7,
+  },
+] as const;
+
+for (const combination of combinations) {
+  themeGenome.mutate({
+    colorScheme: "light",
+    ...combination,
+  });
+
+  const foreground = String(themeGenome.getTrait("foreground"));
+
+  const background = String(themeGenome.getTrait("background"));
+
+  const ratio = contrastRatio(foreground, background);
+
+  if (ratio < combination.minimum) {
+    throw new Error(
+      `Contrast failed for ${combination.selectedMode}/${combination.contrast}`,
+    );
+  }
+}
+```
+
+## Architecture summary
+
+```text
+Primitives
+   │
+   ├── Source colors
+   ├── Base spacing
+   ├── Base radius
+   └── Control dimensions
+          ↓
+Runtime context
+   │
+   ├── System scheme
+   ├── User mode
+   ├── Contrast
+   ├── Density
+   ├── Scale
+   └── Reduced motion
+          ↓
+Derived tokens
+   │
+   ├── Effective mode
+   ├── Semantic colors
+   ├── Accessible foregrounds
+   ├── Spacing
+   ├── Radius
+   ├── Control height
+   ├── Fluid typography
+   └── Motion duration
+          ↓
+CSS custom properties
+          ↓
+Components and framework bindings
+```
+
+## What can go wrong?
+
+- Calling browser bindings during SSR
+- Using different initial server and browser values
+- Forgetting six-digit hex validation for dynamic colors
+- Expecting scopes to follow future parent mutations automatically
+- Forgetting cleanup for bindings and subscriptions
+- Constructing new Genome instances during every render
+- Using context without type narrowing
+- Forgetting CSS units
+- Depending on static entries under `tokens`
+- Treating generated CSS values as a replacement for normal CSS architecture
+
+## Continue learning
+
+- [Dark Mode](/docs/guides/dark-mode)
+- [Responsive Tokens](/docs/guides/responsive-tokens)
+- [Accessible Colors](/docs/guides/accessible-colors)
+- [Container-Aware Components](/docs/guides/container-aware-components)
+- [Scoped Component Themes](/docs/guides/scoped-component-themes)

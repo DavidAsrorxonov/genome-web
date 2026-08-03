@@ -1,0 +1,396 @@
+---
+title: Responsive Tokens
+description: Create continuously fluid and runtime-responsive design values with GenomeJS.
+---
+
+Responsive design values can be handled in two different ways:
+
+1. Generate a fluid CSS expression
+2. Mutate runtime context with an observed environment value
+
+Use the simplest option that fits the problem.
+
+## Use CSS for continuous scaling
+
+`fluidScale()` produces a CSS `clamp()` expression.
+
+```ts
+import { fluidScale, Genome } from "@genomejs/core";
+
+const genome = new Genome({
+  primitives: {
+    bodyMin: 16,
+    bodyMax: 18,
+
+    headingMin: 36,
+    headingMax: 72,
+
+    pagePaddingMin: 16,
+    pagePaddingMax: 48,
+  },
+
+  tokens: {
+    bodySize: (dna) => fluidScale(Number(dna.bodyMin), Number(dna.bodyMax)),
+
+    headingSize: (dna) =>
+      fluidScale(Number(dna.headingMin), Number(dna.headingMax), 320, 1440),
+
+    pagePadding: (dna) =>
+      fluidScale(
+        Number(dna.pagePaddingMin),
+        Number(dna.pagePaddingMax),
+        320,
+        1280,
+      ),
+  },
+});
+```
+
+Use the generated properties:
+
+```css
+body {
+  font-size: var(--g-body-size);
+}
+
+h1 {
+  font-size: var(--g-heading-size);
+}
+
+.page {
+  padding-inline: var(--g-page-padding);
+}
+```
+
+The browser handles interpolation. GenomeJS does not need to receive every viewport resize event.
+
+## When CSS alone is enough
+
+Prefer a fluid CSS expression when:
+
+- The value changes continuously
+- The result is only used for styling
+- CSS can express the relationship directly
+- Component logic does not need the current calculated pixel value
+
+Examples:
+
+- Font size
+- Page padding
+- Section spacing
+- Border radius
+- Decorative dimensions
+
+## Use runtime context for discrete decisions
+
+Some responsive values represent a logical state:
+
+```text
+one column
+two columns
+three columns
+```
+
+Model those with context:
+
+```ts
+const genome = new Genome({
+  primitives: {
+    smallGap: "12px",
+    largeGap: "20px",
+  },
+
+  tokens: {
+    columns: (_dna, context) => {
+      const width =
+        typeof context.viewportWidth === "number" ? context.viewportWidth : 0;
+
+      if (width >= 1024) {
+        return 3;
+      }
+
+      if (width >= 640) {
+        return 2;
+      }
+
+      return 1;
+    },
+
+    gridGap: (dna, context) => {
+      const width =
+        typeof context.viewportWidth === "number" ? context.viewportWidth : 0;
+
+      return width >= 640 ? dna.largeGap : dna.smallGap;
+    },
+  },
+});
+```
+
+Update the viewport value:
+
+```ts
+function updateViewport() {
+  genome.mutate({
+    viewportWidth: window.innerWidth,
+  });
+}
+
+updateViewport();
+
+window.addEventListener("resize", updateViewport);
+```
+
+Cleanup:
+
+```ts
+window.removeEventListener("resize", updateViewport);
+```
+
+For component-local behavior, prefer `bindContainerSize()` rather than global viewport width.
+
+## Use media queries when JavaScript is unnecessary
+
+GenomeJS should not replace CSS media queries without a reason.
+
+This remains a good solution:
+
+```css
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 40rem) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+```
+
+Use Genome runtime context when:
+
+- JavaScript logic needs the state
+- Multiple derived values share the same environmental input
+- A component responds to its own container
+- A user-selected scale affects the design system
+- The responsive condition participates in a broader token graph
+
+## User-controlled scaling
+
+Runtime context is useful for an accessibility or preference scale:
+
+```ts
+const genome = new Genome({
+  primitives: {
+    baseSpacing: 16,
+    baseBodySize: 16,
+  },
+
+  tokens: {
+    spacing: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.baseSpacing) * scale}px`;
+    },
+
+    bodySize: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.baseBodySize) * scale}px`;
+    },
+  },
+});
+
+genome.mutate({
+  scale: 1,
+});
+```
+
+Increase the scale:
+
+```ts
+genome.mutate({
+  scale: 1.125,
+});
+```
+
+Several design tokens respond to one preference without duplicating states.
+
+## Combine fluid and user-controlled scaling
+
+A token can combine a generated fluid expression with application context only when the resulting CSS expression remains valid.
+
+A clearer pattern is often to expose separate variables:
+
+```ts
+const genome = new Genome({
+  primitives: {
+    headingMin: 36,
+    headingMax: 72,
+  },
+
+  tokens: {
+    headingBase: (dna) =>
+      fluidScale(Number(dna.headingMin), Number(dna.headingMax)),
+
+    typeScale: (_dna, context) => {
+      const scale =
+        typeof context.typeScale === "number" ? context.typeScale : 1;
+
+      return scale;
+    },
+  },
+});
+```
+
+Then combine them in CSS:
+
+```css
+h1 {
+  font-size: calc(var(--g-heading-base) * var(--g-type-scale));
+}
+```
+
+Not every CSS function allows every unit combination. Test the resulting expression in the browser.
+
+## Component-responsive values
+
+Use:
+
+```ts
+bindContainerSize(genome, element);
+```
+
+to update:
+
+```ts
+context.containerWidth;
+```
+
+```ts
+const tokens = {
+  cardLayout: (_dna, context) => {
+    const width =
+      typeof context.containerWidth === "number" ? context.containerWidth : 0;
+
+    return width >= 720 ? "horizontal" : "vertical";
+  },
+
+  cardColumns: (_dna, context) => {
+    const width =
+      typeof context.containerWidth === "number" ? context.containerWidth : 0;
+
+    return width >= 720 ? 2 : 1;
+  },
+};
+```
+
+Detailed component setup is covered in [Container-Aware Components](/docs/guides/container-aware-components).
+
+## Avoid excessive resize mutations
+
+Do not automatically send every environmental measurement into GenomeJS.
+
+Prefer CSS when possible.
+
+For manually bound viewport resize handlers, consider whether updates need throttling or animation-frame scheduling.
+
+```ts
+let frame: number | undefined;
+
+function updateViewport() {
+  if (frame !== undefined) {
+    cancelAnimationFrame(frame);
+  }
+
+  frame = requestAnimationFrame(() => {
+    genome.mutate({
+      viewportWidth: window.innerWidth,
+    });
+  });
+}
+```
+
+Cleanup:
+
+```ts
+if (frame !== undefined) {
+  cancelAnimationFrame(frame);
+}
+```
+
+## Validate fluid ranges
+
+The current `fluidScale()` implementation does not validate its arguments.
+
+Avoid equal viewport boundaries:
+
+```ts
+fluidScale(16, 32, 640, 640);
+```
+
+Avoid reversed output bounds unless you have verified the resulting CSS behavior:
+
+```ts
+fluidScale(32, 16);
+```
+
+Create a project wrapper when values come from configuration or users:
+
+```ts
+function safeFluidScale(
+  minPx: number,
+  maxPx: number,
+  minVw: number,
+  maxVw: number,
+): string {
+  if (maxPx < minPx) {
+    throw new Error("maxPx must be at least minPx.");
+  }
+
+  if (maxVw <= minVw) {
+    throw new Error("maxVw must be greater than minVw.");
+  }
+
+  return fluidScale(minPx, maxPx, minVw, maxVw);
+}
+```
+
+## Recommended decision process
+
+```text
+Can CSS express it directly?
+        │
+        ├── Yes
+        │    ↓
+        │  Use CSS or fluidScale()
+        │
+        └── No
+             ↓
+Does the decision depend on a component?
+        │
+        ├── Yes
+        │    ↓
+        │  bindContainerSize()
+        │
+        └── No
+             ↓
+Use explicit runtime context
+```
+
+## What can go wrong?
+
+- Updating context for values CSS could handle more efficiently
+- Forgetting a fallback before the first width measurement
+- Equal `fluidScale()` viewport bounds
+- Layout feedback loops
+- Missing resize cleanup
+- Combining incompatible CSS units
+- Treating viewport width and container width as the same thing
+
+## Related APIs
+
+- [`fluidScale()`](/docs/utilities/fluid-scale)
+- [`bindContainerSize()`](/docs/utilities/bind-container-size)
+- [`mutate()`](/docs/core/mutate)
+- [Container-Aware Components](/docs/guides/container-aware-components)

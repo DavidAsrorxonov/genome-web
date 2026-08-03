@@ -1,0 +1,13 @@
+{
+  "title": "Guides",
+  "description": "Build practical reactive design-system features with GenomeJS.",
+  "defaultOpen": true,
+  "pages": [
+    "dark-mode",
+    "responsive-tokens",
+    "accessible-colors",
+    "container-aware-components",
+    "scoped-component-themes",
+    "building-a-complete-theme"
+  ]
+}

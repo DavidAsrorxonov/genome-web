@@ -1,0 +1,478 @@
+---
+title: Dark Mode
+description: Build system-aware and user-selectable light and dark themes with GenomeJS.
+---
+
+Dark mode is a runtime-context problem.
+
+The interface has stable source colors, while the active surface and foreground depend on environmental or application state.
+
+```text
+System preference ──┐
+                    ├──→ Effective mode
+User selection ─────┘          ↓
+                         Theme tokens
+                              ↓
+                     CSS custom properties
+```
+
+## Define light and dark primitives
+
+Create a Genome with separate light and dark source values:
+
+```ts
+import { Genome } from "@genomejs/core";
+
+export const themeGenome = new Genome({
+  primitives: {
+    lightBackground: "#ffffff",
+    lightForeground: "#171923",
+    lightMuted: "#667085",
+
+    darkBackground: "#121620",
+    darkForeground: "#f7f8fb",
+    darkMuted: "#a5adbd",
+
+    brand: "#7c6cff",
+  },
+
+  tokens: {
+    background: (dna, context) =>
+      context.mode === "dark" ? dna.darkBackground : dna.lightBackground,
+
+    foreground: (dna, context) =>
+      context.mode === "dark" ? dna.darkForeground : dna.lightForeground,
+
+    mutedForeground: (dna, context) =>
+      context.mode === "dark" ? dna.darkMuted : dna.lightMuted,
+
+    primary: (dna) => dna.brand,
+  },
+});
+
+themeGenome.mutate({
+  mode: "light",
+});
+```
+
+Use the generated properties in CSS:
+
+```css
+body {
+  background: var(--g-background);
+  color: var(--g-foreground);
+}
+
+.muted {
+  color: var(--g-muted-foreground);
+}
+
+.button {
+  background: var(--g-primary);
+}
+```
+
+## Toggle the mode manually
+
+```ts
+themeGenome.mutate({
+  mode: "dark",
+});
+```
+
+Return to light mode:
+
+```ts
+themeGenome.mutate({
+  mode: "light",
+});
+```
+
+Multiple theme values can respond to the same context property.
+
+## Bind the system preference
+
+GenomeJS provides:
+
+```ts
+bindMediaQueries(genome);
+```
+
+The helper writes these context properties:
+
+```ts
+{
+  colorScheme:
+    "light" | "dark",
+
+  reducedMotion:
+    boolean,
+}
+```
+
+It does not write `mode`.
+
+A theme using the built-in helper should read `colorScheme`:
+
+```ts
+import { bindMediaQueries, Genome } from "@genomejs/core";
+
+const systemThemeGenome = new Genome({
+  primitives: {
+    lightBackground: "#ffffff",
+    darkBackground: "#121620",
+  },
+
+  tokens: {
+    background: (dna, context) =>
+      context.colorScheme === "dark" ? dna.darkBackground : dna.lightBackground,
+  },
+});
+
+const cleanup = bindMediaQueries(systemThemeGenome);
+```
+
+Call the returned cleanup when the binding is no longer needed:
+
+```ts
+cleanup();
+```
+
+## Support system and explicit user modes
+
+Many applications support three selections:
+
+```text
+System
+Light
+Dark
+```
+
+Keep the system preference and user selection as separate context properties.
+
+The built-in binding controls:
+
+```ts
+colorScheme;
+```
+
+The application controls:
+
+```ts
+selectedColorScheme;
+```
+
+Define an effective mode token:
+
+```ts
+const themeGenome = new Genome({
+  primitives: {
+    lightBackground: "#ffffff",
+    darkBackground: "#121620",
+
+    lightForeground: "#171923",
+    darkForeground: "#f7f8fb",
+  },
+
+  tokens: {
+    effectiveMode: (_dna, context) => {
+      if (context.selectedColorScheme === "light") {
+        return "light";
+      }
+
+      if (context.selectedColorScheme === "dark") {
+        return "dark";
+      }
+
+      return context.colorScheme === "dark" ? "dark" : "light";
+    },
+
+    background: (dna) =>
+      dna.effectiveMode === "dark" ? dna.darkBackground : dna.lightBackground,
+
+    foreground: (dna) =>
+      dna.effectiveMode === "dark" ? dna.darkForeground : dna.lightForeground,
+  },
+});
+
+themeGenome.mutate({
+  colorScheme: "light",
+  selectedColorScheme: "system",
+});
+```
+
+Bind the system preference:
+
+```ts
+const cleanup = bindMediaQueries(themeGenome);
+```
+
+Set an explicit user selection:
+
+```ts
+themeGenome.mutate({
+  selectedColorScheme: "dark",
+});
+```
+
+Return to system mode:
+
+```ts
+themeGenome.mutate({
+  selectedColorScheme: "system",
+});
+```
+
+A later system preference change still updates `colorScheme`, but the explicit user selection takes precedence inside `effectiveMode`.
+
+## React and Next.js
+
+Create a Client Component that binds browser preferences after mounting:
+
+```tsx
+"use client";
+
+import { useEffect } from "react";
+import { bindMediaQueries } from "@genomejs/core";
+
+import { themeGenome } from "@/lib/theme-genome";
+
+export function ThemeEnvironment() {
+  useEffect(() => {
+    return bindMediaQueries(themeGenome);
+  }, []);
+
+  return null;
+}
+```
+
+Render it once near the application root:
+
+```tsx
+<body>
+  <ThemeEnvironment />
+  {children}
+</body>
+```
+
+Create a theme control:
+
+```tsx
+"use client";
+
+import { useGenomeTrait } from "@genomejs/react";
+
+import { themeGenome } from "@/lib/theme-genome";
+
+export function ThemeControls() {
+  const effectiveMode = useGenomeTrait(themeGenome, "effectiveMode");
+
+  return (
+    <div>
+      <p>Current mode: {effectiveMode}</p>
+
+      <button
+        type="button"
+        onClick={() => {
+          themeGenome.mutate({
+            selectedColorScheme: "system",
+          });
+        }}
+      >
+        System
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          themeGenome.mutate({
+            selectedColorScheme: "light",
+          });
+        }}
+      >
+        Light
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          themeGenome.mutate({
+            selectedColorScheme: "dark",
+          });
+        }}
+      >
+        Dark
+      </button>
+    </div>
+  );
+}
+```
+
+## Vue
+
+Bind browser state after the component mounts:
+
+```vue
+<script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
+
+import { bindMediaQueries } from "@genomejs/core";
+
+import { themeGenome } from "@/lib/theme-genome";
+
+let cleanup: (() => void) | undefined;
+
+onMounted(() => {
+  cleanup = bindMediaQueries(themeGenome);
+});
+
+onUnmounted(() => {
+  cleanup?.();
+});
+</script>
+```
+
+## Svelte
+
+```svelte
+<script lang="ts">
+  import {
+    onMount,
+  } from "svelte";
+
+  import {
+    bindMediaQueries,
+  } from "@genomejs/core";
+
+  import {
+    themeGenome,
+  } from "$lib/theme-genome";
+
+  onMount(() => {
+    return bindMediaQueries(
+      themeGenome,
+    );
+  });
+</script>
+```
+
+## Reduced motion
+
+The same media binding writes:
+
+```ts
+reducedMotion: boolean;
+```
+
+Use it in motion-related tokens:
+
+```ts
+const tokens = {
+  transitionDuration: (_dna, context) =>
+    context.reducedMotion ? "0ms" : "180ms",
+
+  transitionDistance: (_dna, context) =>
+    context.reducedMotion ? "0px" : "8px",
+};
+```
+
+```css
+.panel {
+  transition-duration: var(--g-transition-duration);
+}
+```
+
+## SSR and hydration
+
+`bindMediaQueries()` accesses `window`, so it must run only in the browser.
+
+Do not call it at module scope in code that may execute during server rendering:
+
+```ts
+bindMediaQueries(themeGenome);
+```
+
+Use a mount lifecycle or client effect.
+
+Choose stable initial values for server rendering:
+
+```ts
+themeGenome.mutate({
+  colorScheme: "light",
+  reducedMotion: false,
+  selectedColorScheme: "system",
+});
+```
+
+After mounting, the browser binding may update those values.
+
+This can cause a visible theme change when the user’s system is dark but the server rendered a light default.
+
+Applications that persist an explicit user choice can read that value earlier and use it as the initial selection.
+
+## Persist the user selection
+
+GenomeJS does not manage storage.
+
+Store the selection with your application:
+
+```ts
+function selectColorScheme(selection: "system" | "light" | "dark") {
+  localStorage.setItem("color-scheme", selection);
+
+  themeGenome.mutate({
+    selectedColorScheme: selection,
+  });
+}
+```
+
+Restore it after mounting:
+
+```ts
+const saved = localStorage.getItem("color-scheme");
+
+if (saved === "light" || saved === "dark" || saved === "system") {
+  themeGenome.mutate({
+    selectedColorScheme: saved,
+  });
+}
+```
+
+## What can go wrong?
+
+### Reading the wrong context key
+
+The built-in binding writes:
+
+```ts
+context.colorScheme;
+```
+
+It does not write:
+
+```ts
+context.mode;
+```
+
+### Calling the binding during SSR
+
+`window.matchMedia()` is unavailable on the server.
+
+### Forgetting cleanup
+
+Always call the function returned by `bindMediaQueries()`.
+
+### Hydration starts with another mode
+
+Keep server and initial browser state consistent where possible.
+
+### System mode overwrites user mode
+
+Keep system preference and explicit selection as separate values.
+
+## Related APIs
+
+- [`bindMediaQueries()`](/docs/utilities/bind-media-queries)
+- [`mutate()`](/docs/core/mutate)
+- [Accessible Colors](/docs/guides/accessible-colors)
+- [Building a Complete Theme](/docs/guides/building-a-complete-theme)

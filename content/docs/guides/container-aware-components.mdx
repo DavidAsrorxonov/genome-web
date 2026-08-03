@@ -1,0 +1,387 @@
+---
+title: Container-Aware Components
+description: Build components that resolve GenomeJS tokens from their own observed width.
+---
+
+Viewport-responsive design asks:
+
+> How wide is the browser?
+
+Container-aware design asks:
+
+> How wide is this component?
+
+GenomeJS can write an element’s observed content width into runtime context with:
+
+```ts
+bindContainerSize();
+```
+
+## Create a component token system
+
+```ts
+import { Genome } from "@genomejs/core";
+
+export const cardGenome = new Genome({
+  primitives: {
+    compactGap: "12px",
+    comfortableGap: "20px",
+
+    compactPadding: "16px",
+    comfortablePadding: "24px",
+
+    compactRadius: "12px",
+    comfortableRadius: "18px",
+  },
+
+  tokens: {
+    columns: (_dna, context) => {
+      const width =
+        typeof context.containerWidth === "number" ? context.containerWidth : 0;
+
+      if (width >= 960) {
+        return 3;
+      }
+
+      if (width >= 640) {
+        return 2;
+      }
+
+      return 1;
+    },
+
+    cardDirection: (_dna, context) => {
+      const width =
+        typeof context.containerWidth === "number" ? context.containerWidth : 0;
+
+      return width >= 520 ? "row" : "column";
+    },
+
+    gap: (dna, context) => {
+      const width =
+        typeof context.containerWidth === "number" ? context.containerWidth : 0;
+
+      return width >= 640 ? dna.comfortableGap : dna.compactGap;
+    },
+
+    padding: (dna, context) =>
+      context.density === "compact"
+        ? dna.compactPadding
+        : dna.comfortablePadding,
+
+    radius: (dna, context) =>
+      context.density === "compact" ? dna.compactRadius : dna.comfortableRadius,
+  },
+});
+
+cardGenome.mutate({
+  density: "comfortable",
+});
+```
+
+## Bind one element
+
+```ts
+import { bindContainerSize } from "@genomejs/core";
+
+const element = document.querySelector<HTMLElement>("[data-card-grid]");
+
+if (!element) {
+  throw new Error("Card grid was not found.");
+}
+
+const cleanup = bindContainerSize(cardGenome, element);
+```
+
+The observer writes:
+
+```ts
+{
+  containerWidth:
+    entry.contentRect.width,
+}
+```
+
+## Use generated values
+
+```css
+.card-grid {
+  display: grid;
+
+  grid-template-columns: repeat(var(--g-columns), minmax(0, 1fr));
+
+  gap: var(--g-gap);
+}
+
+.card {
+  display: flex;
+
+  flex-direction: var(--g-card-direction);
+
+  gap: var(--g-gap);
+
+  padding: var(--g-padding);
+
+  border-radius: var(--g-radius);
+}
+```
+
+## Initial measurement timing
+
+`bindContainerSize()` starts observing immediately, but it does not manually calculate a width before the observer callback.
+
+The first width mutation is asynchronous.
+
+Token functions therefore need a fallback:
+
+```ts
+const width =
+  typeof context.containerWidth === "number" ? context.containerWidth : 0;
+```
+
+The fallback should produce a valid narrow layout.
+
+## Use a scoped Genome per component
+
+A single Genome contains one:
+
+```ts
+containerWidth;
+```
+
+value.
+
+Do not bind several independent components to the same Genome when each component can have a different width.
+
+Create a scope for each component:
+
+```ts
+const firstGenome = cardGenome.scope(firstElement);
+
+const secondGenome = cardGenome.scope(secondElement);
+
+const cleanupFirst = bindContainerSize(firstGenome, firstElement);
+
+const cleanupSecond = bindContainerSize(secondGenome, secondElement);
+```
+
+Each child has independent context and CSS output.
+
+## React component
+
+```tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import type { Genome } from "@genomejs/core";
+import { bindContainerSize } from "@genomejs/core";
+
+import { cardGenome } from "@/lib/card-genome";
+
+export function CardGrid() {
+  const gridRef = useRef<HTMLDivElement | null>(null);
+
+  const scopedGenomeRef = useRef<Genome | null>(null);
+
+  useEffect(() => {
+    const element = gridRef.current;
+
+    if (!element) {
+      return;
+    }
+
+    const scopedGenome = cardGenome.scope(element, {
+      density: "comfortable",
+    });
+
+    scopedGenomeRef.current = scopedGenome;
+
+    const cleanupSize = bindContainerSize(scopedGenome, element);
+
+    return () => {
+      cleanupSize();
+
+      scopedGenomeRef.current = null;
+    };
+  }, []);
+
+  function useCompactDensity() {
+    scopedGenomeRef.current?.mutate({
+      density: "compact",
+    });
+  }
+
+  return (
+    <section>
+      <button type="button" onClick={useCompactDensity}>
+        Compact cards
+      </button>
+
+      <div ref={gridRef} data-card-grid className="card-grid">
+        <article className="card">First card</article>
+
+        <article className="card">Second card</article>
+
+        <article className="card">Third card</article>
+      </div>
+    </section>
+  );
+}
+```
+
+## Vue component
+
+```vue
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref } from "vue";
+
+import type { Genome } from "@genomejs/core";
+
+import { bindContainerSize } from "@genomejs/core";
+
+import { cardGenome } from "@/lib/card-genome";
+
+const grid = ref<HTMLElement | null>(null);
+
+let scopedGenome: Genome | undefined;
+
+let cleanup: (() => void) | undefined;
+
+onMounted(() => {
+  if (!grid.value) {
+    return;
+  }
+
+  scopedGenome = cardGenome.scope(grid.value, {
+    density: "comfortable",
+  });
+
+  cleanup = bindContainerSize(scopedGenome, grid.value);
+});
+
+onUnmounted(() => {
+  cleanup?.();
+});
+</script>
+
+<template>
+  <div ref="grid" class="card-grid">
+    <!-- Cards -->
+  </div>
+</template>
+```
+
+## Svelte component
+
+```svelte
+<script lang="ts">
+  import {
+    onMount,
+  } from "svelte";
+
+  import type {
+    Genome,
+  } from "@genomejs/core";
+
+  import {
+    bindContainerSize,
+  } from "@genomejs/core";
+
+  import {
+    cardGenome,
+  } from "$lib/card-genome";
+
+  let grid:
+    HTMLElement;
+
+  let scopedGenome:
+    Genome;
+
+  onMount(() => {
+    scopedGenome =
+      cardGenome.scope(
+        grid,
+        {
+          density:
+            "comfortable",
+        },
+      );
+
+    return bindContainerSize(
+      scopedGenome,
+      grid,
+    );
+  });
+</script>
+
+<div
+  bind:this={grid}
+  class="card-grid"
+>
+  <!-- Cards -->
+</div>
+```
+
+## Avoid width feedback loops
+
+Be careful when a width-derived token changes the same element’s width.
+
+Example:
+
+```ts
+const tokens = {
+  width: (_dna, context) =>
+    Number(context.containerWidth) >= 600 ? "50%" : "100%",
+};
+```
+
+The output can alter the observed width, which may trigger another resolution.
+
+A threshold near the switching point can oscillate.
+
+Prefer changing internal layout rather than repeatedly changing the observed container’s own available width.
+
+## Observe the correct element
+
+`entry.contentRect.width` represents the observed element’s content rectangle.
+
+It may differ from:
+
+- The viewport
+- Border-box width
+- A parent’s available width
+- `window.innerWidth`
+- The element’s CSS declaration
+
+Choose thresholds based on the value actually observed.
+
+## Cleanup
+
+Always disconnect the observer:
+
+```ts
+cleanup();
+```
+
+The returned function calls:
+
+```ts
+observer.disconnect();
+```
+
+## What can go wrong?
+
+- Binding multiple containers to one Genome instance
+- Forgetting the initial-width fallback
+- Calling the utility during SSR
+- Forgetting observer cleanup
+- Observing the wrong element
+- Creating a feedback loop
+- Assuming content width equals border-box width
+
+## Related APIs
+
+- [`bindContainerSize()`](/docs/utilities/bind-container-size)
+- [`scope()`](/docs/core/scope)
+- [Scoped Component Themes](/docs/guides/scoped-component-themes)
+- [Responsive Tokens](/docs/guides/responsive-tokens)
