@@ -3,12 +3,9 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import {
   Braces,
-  Check,
   GitBranch,
   Search,
   Variable,
-  X,
-  Activity,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -118,6 +115,8 @@ const stages: Stage[] = [
   },
 ];
 
+const AUTO_STAGE_DELAY_MS = 2200;
+
 function StageButton({
   stage,
   index,
@@ -161,17 +160,13 @@ function StageButton({
       >
         <span
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground transition-all duration-300",
+            "flex size-9 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground transition-all duration-500 md:mx-auto",
             reached && "border-primary bg-primary text-primary-foreground",
             active &&
               "shadow-[0_0_0_5px_color-mix(in_oklab,var(--primary)_15%,transparent)]",
           )}
         >
-          {index < activeIndex ? (
-            <Check className="size-4" strokeWidth={2.5} aria-hidden="true" />
-          ) : (
-            <X className="size-4" aria-hidden="true" />
-          )}
+          <Icon className="size-4" aria-hidden={true} />
         </span>
 
         <span className="block min-w-0 pb-8 md:mt-5 md:px-3 md:pb-0">
@@ -293,7 +288,7 @@ export function HowItWorks() {
         stages.forEach((_, index) => {
           const timer = setTimeout(() => {
             setActiveIndex(index);
-          }, index * 650);
+          }, index * AUTO_STAGE_DELAY_MS);
 
           timersRef.current.push(timer);
         });
@@ -364,7 +359,7 @@ export function HowItWorks() {
         >
           <div className="flex flex-col rounded-2xl border bg-card p-6 text-card-foreground sm:p-8">
             <div className="flex size-11 items-center justify-center rounded-xl border bg-background text-primary shadow-sm">
-              <Activity className="size-5" aria-hidden="true" />
+              <ActiveIcon className="size-5" aria-hidden={true} />
             </div>
 
             <p className="mt-8 font-mono text-xs tracking-[0.16em] text-primary">
