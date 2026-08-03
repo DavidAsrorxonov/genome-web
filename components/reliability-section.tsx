@@ -5,7 +5,6 @@ import {
   CircleAlert,
   Gauge,
   GitBranch,
-  Link2,
   Server,
   ShieldCheck,
   SquareTerminal,
@@ -188,7 +187,7 @@ function SafeguardCard({ safeguard }: { safeguard: Safeguard }) {
     <article className="overflow-hidden rounded-2xl border bg-background">
       <div className="flex items-start gap-4 border-b p-5 sm:p-6">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card text-primary">
-          <Link2 className="size-5" aria-hidden="true" />
+          <Icon className="size-5" aria-hidden={true} />
         </span>
 
         <div>

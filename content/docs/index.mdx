@@ -1,23 +1,152 @@
 ---
-title: Introduction
-description: A reactive design-token compiler for interfaces that respond to runtime context.
+title: What is GenomeJS?
+description: Learn what GenomeJS does, how its token model works, and when to use it.
 ---
-
-## What is GenomeJS?
 
 GenomeJS is a reactive design-token compiler for frontend interfaces.
 
-Declare primitives, tokens, and runtime context. GenomeJS discovers dependencies, resolves values safely, and expresses the result as CSS custom properties.
+You define raw values, derived token functions, and runtime context. GenomeJS discovers the relationships between those values, resolves them in dependency order, and expresses the result as CSS custom properties.
 
-## Core packages
-
-- `@genomejs/core`
-- `@genomejs/react`
-- `@genomejs/vue`
-- `@genomejs/svelte`
-
-## Installation
-
-```bash
-npm install @genomejs/core
+```text
+Runtime context changes
+        ↓
+Affected dependencies resolve
+        ↓
+Token values update
+        ↓
+CSS custom properties change
+        ↓
+The rendered interface responds
 ```
+
+## The token model
+
+A Genome configuration has three main parts.
+
+### Primitives
+
+Primitives are raw values that do not depend on other tokens.
+
+```ts
+const primitives = {
+  baseColor: "#7c6cff",
+  baseSpacing: 16,
+};
+```
+
+GenomeJS currently supports string and number primitive values.
+
+### Tokens
+
+Tokens can be static values or pure functions derived from primitives, other tokens, and runtime context.
+
+```ts
+const tokens = {
+  gap: (dna, context) => Number(dna.baseSpacing) * Number(context.scale ?? 1),
+};
+```
+
+The `dna` object contains values that have already been resolved.
+
+The `context` object contains live runtime conditions such as mode, scale, contrast, viewport state, or any values your token system needs.
+
+### Runtime context
+
+Context can change after the Genome instance has been created.
+
+```ts
+genome.mutate({
+  mode: "dark",
+  scale: 1.25,
+});
+```
+
+Calling `mutate()` causes derived values to resolve again and notifies subscribers.
+
+## What GenomeJS handles
+
+GenomeJS is responsible for:
+
+- Discovering token dependencies from value reads
+- Building the dependency graph
+- Resolving derived values in a valid order
+- Detecting circular dependencies
+- Detecting unresolved token references
+- Responding to runtime context mutations
+- Expressing resolved values as `--g-*` CSS custom properties
+- Skipping CSS writes when the resulting value has not changed
+- Notifying framework and application subscribers
+
+## What GenomeJS does not replace
+
+GenomeJS does not replace CSS, CSS custom properties, Tailwind CSS, or your component library.
+
+It produces and manages values that those systems can consume.
+
+```css
+.button {
+  background: var(--g-button-color);
+  border-radius: var(--g-control-radius);
+}
+```
+
+## When to use GenomeJS
+
+GenomeJS is useful when design values depend on runtime conditions or on other design values.
+
+Examples include:
+
+- Light and dark modes
+- Accessible foreground colors
+- Density settings
+- Responsive spacing or typography
+- Container-aware components
+- Scoped component themes
+- Design systems shared across multiple frameworks
+
+For a small static theme with no derived values or runtime behavior, ordinary CSS custom properties may already be enough.
+
+## Smallest example
+
+```ts
+import { Genome } from "@genomejs/core";
+
+const genome = new Genome({
+  primitives: {
+    baseSize: 16,
+  },
+
+  tokens: {
+    scaledSize: (dna, context) =>
+      Number(dna.baseSize) * Number(context.scale ?? 1),
+  },
+});
+
+genome.mutate({
+  scale: 1.5,
+});
+
+console.log(genome.getTrait("scaledSize"));
+// 24
+```
+
+In a browser, resolved values are also expressed on the target element:
+
+```css
+--g-base-size: 16;
+--g-scaled-size: 24;
+```
+
+## What can go wrong?
+
+GenomeJS reports invalid token systems early:
+
+- A circular graph throws `CircularDependencyError`.
+- A reference to a missing token throws `UnresolvedTokenError`.
+- Calling `getTrait()` with an unknown name throws an error.
+- Context values must be converted or validated when your token expects a specific type.
+
+## Next steps
+
+- [Install GenomeJS](/docs/installation)
+- [Build your first token system](/docs/quick-start)

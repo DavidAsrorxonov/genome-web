@@ -1,0 +1,150 @@
+---
+title: Installation
+description: Install the GenomeJS Core package and optional framework adapters.
+---
+
+Every GenomeJS project starts with the framework-neutral Core package.
+
+## Core
+
+```bash
+npm install @genomejs/core
+```
+
+The Core package includes:
+
+- The `Genome` class
+- Runtime mutation
+- Token subscriptions
+- Scoped Genome instances
+- Dependency and error handling
+- Contrast utilities
+- Fluid typography
+- Browser environment bindings
+
+Import the compiler:
+
+```ts
+import { Genome } from "@genomejs/core";
+```
+
+## React
+
+Install Core and the React adapter:
+
+```bash
+npm install @genomejs/core @genomejs/react
+```
+
+```tsx
+import { useGenomeTrait } from "@genomejs/react";
+```
+
+The React adapter subscribes components to resolved token values.
+
+## Vue
+
+Install Core and the Vue adapter:
+
+```bash
+npm install @genomejs/core @genomejs/vue
+```
+
+```ts
+import { useGenomeTrait } from "@genomejs/vue";
+```
+
+The Vue adapter exposes a reactive Vue ref.
+
+## Svelte
+
+Install Core and the Svelte adapter:
+
+```bash
+npm install @genomejs/core @genomejs/svelte
+```
+
+```ts
+import { genomeTrait } from "@genomejs/svelte";
+```
+
+The Svelte package ships rune-aware source and requires a Svelte-aware downstream bundler.
+
+## Browser target
+
+In a browser, a Genome instance writes its resolved values to `document.documentElement` by default.
+
+```ts
+const genome = new Genome({
+  primitives: {},
+  tokens: {},
+});
+```
+
+You can provide another element as the second constructor argument:
+
+```ts
+const target = document.querySelector<HTMLElement>("[data-theme-root]");
+
+const genome = new Genome(
+  {
+    primitives: {},
+    tokens: {},
+  },
+  target,
+);
+```
+
+The target may also be `null`. This is useful during server rendering, where no browser document is available.
+
+## Package selection
+
+Use only the packages your application needs:
+
+| Application                      | Packages                             |
+| -------------------------------- | ------------------------------------ |
+| Vanilla JavaScript or TypeScript | `@genomejs/core`                     |
+| React or Next.js                 | `@genomejs/core`, `@genomejs/react`  |
+| Vue                              | `@genomejs/core`, `@genomejs/vue`    |
+| Svelte                           | `@genomejs/core`, `@genomejs/svelte` |
+
+## Verify the installation
+
+Create a Genome instance and read one value:
+
+```ts
+import { Genome } from "@genomejs/core";
+
+const genome = new Genome({
+  primitives: {
+    spacing: 16,
+  },
+
+  tokens: {},
+});
+
+console.log(genome.getTrait("spacing"));
+// 16
+```
+
+## Common installation problems
+
+### The adapter cannot resolve Core
+
+Ensure `@genomejs/core` is installed alongside the framework adapter.
+
+```bash
+npm install @genomejs/core @genomejs/react
+```
+
+### Multiple React installations
+
+In a monorepo, verify that the website and `@genomejs/react` resolve the same React installation.
+
+### No CSS variables appear
+
+Check that the Genome instance has a real target element. During server rendering the target is intentionally `null`, so CSS values are expressed after the browser-side instance is created.
+
+## Next step
+
+[Create your first reactive token system](/docs/quick-start).

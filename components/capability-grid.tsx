@@ -4,7 +4,6 @@ import {
   CircleAlert,
   Gauge,
   GitBranch,
-  Link2,
   Network,
   RefreshCcw,
 } from "lucide-react";
@@ -127,7 +126,7 @@ function CapabilityCard({ capability }: { capability: Capability }) {
       <div className="relative">
         <div className="flex items-start justify-between gap-4">
           <span className="flex size-11 items-center justify-center rounded-xl border bg-background text-primary shadow-sm">
-            <Link2 className="size-5" aria-hidden="true" />
+            <Icon className="size-5" aria-hidden={true} />
           </span>
 
           <span className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground">

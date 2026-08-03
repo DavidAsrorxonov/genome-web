@@ -296,6 +296,7 @@ export function HeroCompilerDemo() {
 
   return (
     <div
+      id="compiler-demo"
       ref={previewRootRef}
       className="relative rounded-2xl border bg-card p-3 text-card-foreground shadow-[0_1px_2px_rgb(0_0_0/0.04),0_18px_50px_rgb(0_0_0/0.08)] sm:p-4"
     >

@@ -1,0 +1,224 @@
+---
+title: Quick Start
+description: Create a Genome, define a derived token, mutate runtime context, and consume the result.
+---
+
+This guide creates a spacing token that responds to runtime scale.
+
+## 1. Install Core
+
+```bash
+npm install @genomejs/core
+```
+
+For React applications, also install the React adapter:
+
+```bash
+npm install @genomejs/react
+```
+
+## 2. Create a Genome
+
+Create `lib/interface-genome.ts`:
+
+```ts
+import { Genome } from "@genomejs/core";
+
+export const interfaceGenome = new Genome({
+  primitives: {
+    baseSpacing: 16,
+    baseColor: "#7c6cff",
+  },
+
+  tokens: {
+    spacing: (dna, context) =>
+      `${Number(dna.baseSpacing) * Number(context.scale ?? 1)}px`,
+
+    buttonColor: (dna) => dna.baseColor,
+  },
+});
+
+interfaceGenome.mutate({
+  scale: 1,
+});
+```
+
+This configuration contains:
+
+- Two primitives: `baseSpacing` and `baseColor`
+- Two derived tokens: `spacing` and `buttonColor`
+- One runtime context value: `scale`
+
+GenomeJS discovers that `spacing` depends on `baseSpacing`.
+
+## 3. Read a resolved value
+
+```ts
+const spacing = interfaceGenome.getTrait("spacing");
+
+console.log(spacing);
+// "16px"
+```
+
+`getTrait()` returns the current resolved value.
+
+Calling it with an unknown token name throws an error.
+
+## 4. Mutate runtime context
+
+```ts
+interfaceGenome.mutate({
+  scale: 1.25,
+});
+
+console.log(interfaceGenome.getTrait("spacing"));
+// "20px"
+```
+
+The primitive remains `16`, but the derived `spacing` token resolves again using the new scale.
+
+## 5. Use the generated CSS variables
+
+In the browser, GenomeJS expresses the current values as inline CSS custom properties on its target element.
+
+The resulting output is equivalent to:
+
+```css
+:root {
+  --g-base-spacing: 16;
+  --g-base-color: #7c6cff;
+  --g-spacing: 20px;
+  --g-button-color: #7c6cff;
+}
+```
+
+Use those properties in ordinary CSS:
+
+```css
+.card {
+  display: grid;
+  gap: var(--g-spacing);
+}
+
+.button {
+  background: var(--g-button-color);
+}
+```
+
+GenomeJS manages the values. Your CSS remains normal CSS.
+
+## 6. Subscribe without a framework
+
+```ts
+const unsubscribe = interfaceGenome.subscribe(() => {
+  console.log(interfaceGenome.getTrait("spacing"));
+});
+
+interfaceGenome.mutate({
+  scale: 1.5,
+});
+// Logs "24px"
+
+unsubscribe();
+```
+
+`subscribe()` returns a cleanup function.
+
+## 7. Bind the value to React
+
+Create `components/spacing-preview.tsx`:
+
+```tsx
+"use client";
+
+import { useGenomeTrait } from "@genomejs/react";
+
+import { interfaceGenome } from "@/lib/interface-genome";
+
+export function SpacingPreview() {
+  const spacing = useGenomeTrait(interfaceGenome, "spacing");
+
+  function increaseScale() {
+    interfaceGenome.mutate({
+      scale: 1.5,
+    });
+  }
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gap: String(spacing),
+      }}
+    >
+      <strong>Current spacing: {spacing}</strong>
+
+      <button type="button" onClick={increaseScale}>
+        Increase scale
+      </button>
+    </div>
+  );
+}
+```
+
+The component subscribes to `spacing`. When `mutate()` changes its resolved value, React renders the new snapshot.
+
+## Resolution flow
+
+When the button is pressed:
+
+```text
+scale changes from 1 to 1.5
+        ↓
+spacing resolves from 16px to 24px
+        ↓
+--g-spacing is updated
+        ↓
+useGenomeTrait receives the new value
+        ↓
+the component renders again
+```
+
+## What can go wrong?
+
+### Context values have the wrong type
+
+Runtime context accepts arbitrary values. Convert or validate values before using them in arithmetic:
+
+```ts
+Number(context.scale ?? 1);
+```
+
+### A token reads a missing value
+
+This fails during dependency compilation:
+
+```ts
+const tokens = {
+  spacing: (dna) => Number(dna.missingSpacing),
+};
+```
+
+### Tokens form a cycle
+
+This also fails during compilation:
+
+```ts
+const tokens = {
+  first: (dna) => Number(dna.second),
+
+  second: (dna) => Number(dna.first),
+};
+```
+
+### The CSS output is attached to the wrong element
+
+Pass the intended target as the second constructor argument, or use `scope()` for isolated component output.
+
+## See it running
+
+[Open the interactive compiler demo](/#compiler-demo).
+
+## Continue learning
+
+Next, learn how primitives, tokens, runtime context, and the DNA object work together in **Core Concepts**.
