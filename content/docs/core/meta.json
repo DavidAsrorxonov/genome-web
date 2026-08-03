@@ -2,5 +2,15 @@
   "title": "Core",
   "description": "The framework-neutral GenomeJS compiler and runtime.",
   "defaultOpen": true,
-  "pages": ["genome", "primitives", "tokens", "context"]
+  "pages": [
+    "genome",
+    "primitives",
+    "tokens",
+    "context",
+    "---Methods---",
+    "mutate",
+    "get-trait",
+    "subscribe",
+    "scope"
+  ]
 }

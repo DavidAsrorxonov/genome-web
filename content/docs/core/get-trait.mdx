@@ -1,0 +1,266 @@
+---
+title: getTrait()
+description: Read the current resolved value of a primitive or derived Genome token.
+---
+
+`getTrait()` returns the current resolved value associated with one Genome token name.
+
+## Signature
+
+```ts
+genome.getTrait(
+  name: string,
+): Primitive
+```
+
+## Parameters
+
+| Parameter | Type     | Description                                    |
+| --------- | -------- | ---------------------------------------------- |
+| `name`    | `string` | Name of the primitive or derived token to read |
+
+## Return value
+
+```ts
+type Primitive = string | number;
+```
+
+The returned value is the current resolved value stored in the Genome’s DNA.
+
+## Reading a primitive
+
+```ts
+const genome = new Genome({
+  primitives: {
+    spacing: 16,
+  },
+
+  tokens: {},
+});
+
+genome.getTrait("spacing");
+// 16
+```
+
+## Reading a derived token
+
+```ts
+const genome = new Genome({
+  primitives: {
+    spacing: 16,
+  },
+
+  tokens: {
+    sectionGap: (dna) => `${Number(dna.spacing) * 4}px`,
+  },
+});
+
+genome.getTrait("sectionGap");
+// "64px"
+```
+
+## Reading after mutation
+
+`getTrait()` always reads the latest resolved value.
+
+```ts
+const genome = new Genome({
+  primitives: {
+    spacing: 16,
+  },
+
+  tokens: {
+    gap: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.spacing) * scale}px`;
+    },
+  },
+});
+
+genome.getTrait("gap");
+// "16px"
+
+genome.mutate({
+  scale: 1.5,
+});
+
+genome.getTrait("gap");
+// "24px"
+```
+
+## Reading inside a subscription
+
+```ts
+const unsubscribe = genome.subscribe(() => {
+  const gap = genome.getTrait("gap");
+
+  console.log(gap);
+});
+
+genome.mutate({
+  scale: 1.25,
+});
+```
+
+Subscribers do not receive a value argument. Read the required traits with `getTrait()` inside the listener.
+
+## Unknown token behavior
+
+Calling `getTrait()` with a name that is not present in the resolved DNA throws an error.
+
+```ts
+genome.getTrait("missingToken");
+```
+
+Current error message:
+
+```text
+Unknown token: "missingToken"
+```
+
+The thrown value is currently a standard `Error`, not `UnresolvedTokenError`.
+
+`UnresolvedTokenError` is used when a token function references a missing DNA value during graph compilation.
+
+## Primitive and token names share one namespace
+
+Primitives and derived tokens are combined into one resolved DNA object.
+
+```ts
+const genome = new Genome({
+  primitives: {
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    spacing: (dna) => `${dna.baseSpacing}px`,
+  },
+});
+```
+
+Both values are available:
+
+```ts
+genome.getTrait("baseSpacing");
+// 16
+
+genome.getTrait("spacing");
+// "16px"
+```
+
+Avoid using the same name for a primitive and a token.
+
+## TypeScript return type
+
+The return type is the broad `Primitive` union:
+
+```ts
+string | number;
+```
+
+GenomeJS does not currently infer a different return type for every token name.
+
+Narrow or convert the result when necessary:
+
+```ts
+const value = genome.getTrait("spacing");
+
+const spacing = typeof value === "number" ? value : Number.parseFloat(value);
+```
+
+For styles, conversion to a string is often sufficient:
+
+```tsx
+const color = useGenomeTrait(genome, "buttonColor");
+
+return (
+  <button
+    style={{
+      backgroundColor: String(color),
+    }}
+  >
+    Continue
+  </button>
+);
+```
+
+## Server usage
+
+`getTrait()` works when the Genome has no DOM target:
+
+```ts
+const genome = new Genome(
+  {
+    primitives: {
+      message: "Hello",
+    },
+
+    tokens: {},
+  },
+  null,
+);
+
+genome.getTrait("message");
+// "Hello"
+```
+
+CSS expression requires an element, but value resolution and trait reads do not.
+
+## Reading generated CSS names
+
+`getTrait()` uses the original JavaScript token name:
+
+```ts
+genome.getTrait("buttonColor");
+```
+
+Not the generated CSS custom-property name:
+
+```ts
+genome.getTrait("--g-button-color");
+// throws
+```
+
+The mapping is:
+
+```text
+JavaScript name: buttonColor
+CSS property:    --g-button-color
+```
+
+## Error behavior
+
+`getTrait()` throws when the supplied name does not exist in the current DNA.
+
+```ts
+try {
+  genome.getTrait("missing");
+} catch (error) {
+  console.error(error);
+}
+```
+
+It does not return:
+
+```ts
+undefined;
+```
+
+This helps catch spelling mistakes and invalid assumptions early.
+
+## Notes
+
+- Reads are synchronous.
+- The method returns strings or numbers.
+- Both primitives and derived tokens are readable.
+- The name must use the original configuration key.
+- An unknown name throws instead of returning `undefined`.
+- Reading a value does not create a subscription.
+
+## Related APIs
+
+- [`subscribe()`](/docs/core/subscribe)
+- [`mutate()`](/docs/core/mutate)
+- [Primitives](/docs/core/primitives)
+- [Tokens](/docs/core/tokens)

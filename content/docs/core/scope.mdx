@@ -1,0 +1,345 @@
+---
+title: scope()
+description: Create an independent child Genome that expresses the same token system onto another element.
+---
+
+`scope()` creates a new Genome instance using the same primitives and token definitions as its parent.
+
+The child writes CSS custom properties to another element and may begin with context overrides.
+
+## Signature
+
+```ts
+genome.scope(
+  target: HTMLElement,
+  overrides?: RuntimeContext,
+): Genome
+```
+
+## Parameters
+
+| Parameter   | Type             | Required | Description                                              |
+| ----------- | ---------------- | -------- | -------------------------------------------------------- |
+| `target`    | `HTMLElement`    | Yes      | Element that receives the child’s CSS custom properties  |
+| `overrides` | `RuntimeContext` | No       | Context values applied over the parent’s current context |
+
+The default value of `overrides` is:
+
+```ts
+{
+}
+```
+
+## Return value
+
+```ts
+Genome;
+```
+
+The returned value is a fully independent child Genome instance.
+
+## Basic example
+
+```ts
+const parent = new Genome({
+  primitives: {
+    lightSurface: "#ffffff",
+    darkSurface: "#121620",
+  },
+
+  tokens: {
+    surface: (dna, context) =>
+      context.mode === "dark" ? dna.darkSurface : dna.lightSurface,
+  },
+});
+
+parent.mutate({
+  mode: "light",
+});
+
+const panel = document.querySelector<HTMLElement>("[data-panel]");
+
+if (panel) {
+  const child = parent.scope(panel, {
+    mode: "dark",
+  });
+
+  child.getTrait("surface");
+  // "#121620"
+}
+```
+
+The document root can remain light while the panel uses dark scoped values.
+
+## CSS output
+
+Given:
+
+```html
+<div data-panel>Scoped panel</div>
+```
+
+The child writes its values directly onto that element:
+
+```html
+<div
+  data-panel
+  style="
+    --g-light-surface: #ffffff;
+    --g-dark-surface: #121620;
+    --g-surface: #121620;
+  "
+>
+  Scoped panel
+</div>
+```
+
+Descendants can consume those properties normally:
+
+```css
+[data-panel] {
+  background: var(--g-surface);
+}
+```
+
+CSS custom-property inheritance allows nested components to use the scoped values.
+
+## Parent context inheritance
+
+The child begins with the parent’s current context.
+
+```ts
+parent.mutate({
+  mode: "light",
+  density: "comfortable",
+});
+```
+
+Creating this child:
+
+```ts
+const child = parent.scope(element, {
+  density: "compact",
+});
+```
+
+Produces a child context conceptually equivalent to:
+
+```ts
+{
+  mode: "light",
+  density: "compact",
+}
+```
+
+Overrides take precedence over the parent values.
+
+## Parent and child are independent
+
+After creation, the parent and child have separate context and DNA state.
+
+```ts
+parent.mutate({
+  mode: "dark",
+});
+```
+
+This does not automatically update the previously created child.
+
+Likewise:
+
+```ts
+child.mutate({
+  density: "comfortable",
+});
+```
+
+Does not mutate the parent.
+
+Use explicit mutations when parent and child state should remain synchronized.
+
+## Mutating the child
+
+```ts
+const child = parent.scope(element, {
+  density: "compact",
+});
+
+child.mutate({
+  mode: "dark",
+});
+```
+
+The child resolves and expresses its own values on its own target.
+
+## Subscribing to a child
+
+```ts
+const unsubscribe = child.subscribe(() => {
+  console.log(child.getTrait("surface"));
+});
+
+child.mutate({
+  mode: "dark",
+});
+```
+
+Parent subscriptions and child subscriptions are separate.
+
+## Multiple scopes
+
+A parent may create multiple child instances:
+
+```ts
+const compactPanel = parent.scope(compactElement, {
+  density: "compact",
+});
+
+const spaciousPanel = parent.scope(spaciousElement, {
+  density: "comfortable",
+});
+```
+
+Both use the same token definitions but maintain separate runtime context.
+
+```text
+Parent Genome
+    │
+    ├── Compact panel Genome
+    │     density = compact
+    │
+    └── Spacious panel Genome
+          density = comfortable
+```
+
+## Component theme example
+
+```ts
+const theme = new Genome({
+  primitives: {
+    baseRadius: 12,
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    radius: (dna, context) =>
+      context.density === "compact"
+        ? `${Number(dna.baseRadius) * 0.75}px`
+        : `${dna.baseRadius}px`,
+
+    spacing: (dna, context) =>
+      context.density === "compact"
+        ? `${Number(dna.baseSpacing) * 0.5}px`
+        : `${dna.baseSpacing}px`,
+  },
+});
+
+const toolbar = document.querySelector<HTMLElement>("[data-toolbar]");
+
+if (toolbar) {
+  theme.scope(toolbar, {
+    density: "compact",
+  });
+}
+```
+
+```css
+[data-toolbar] {
+  display: flex;
+  gap: var(--g-spacing);
+  border-radius: var(--g-radius);
+}
+```
+
+## Target requirements
+
+`scope()` requires an `HTMLElement`.
+
+```ts
+const target = document.querySelector<HTMLElement>("[data-panel]");
+
+if (!target) {
+  throw new Error("Panel target was not found");
+}
+
+const child = parent.scope(target);
+```
+
+Unlike the main `Genome` constructor, `scope()` does not accept `null`.
+
+Check that the element exists before creating the child.
+
+## Creating scopes in React
+
+Create browser-bound scopes after the target element mounts.
+
+```tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+
+export function CompactPanel() {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const element = panelRef.current;
+
+    if (!element) {
+      return;
+    }
+
+    const child = genome.scope(element, {
+      density: "compact",
+    });
+
+    return child.subscribe(() => {
+      console.log(child.getTrait("spacing"));
+    });
+  }, []);
+
+  return <div ref={panelRef}>Compact panel</div>;
+}
+```
+
+The current API does not expose a dedicated `destroy()` method. Clean up any subscriptions created for the child when the component unmounts.
+
+## Server rendering
+
+`scope()` requires a real `HTMLElement`, so it must be called in a browser environment after the target exists.
+
+Do not call it during server rendering:
+
+```ts
+// No HTMLElement exists on the server.
+genome.scope(element);
+```
+
+The parent Genome may still resolve without a DOM target on the server.
+
+## Error behavior
+
+`scope()` may fail when:
+
+- The supplied target is not a valid `HTMLElement`
+- The shared token graph is invalid
+- A token function throws during child resolution
+- An override contains a value that a token handles incorrectly
+
+Graph validation is performed again when the child Genome is constructed.
+
+## Notes
+
+- A scope is a new Genome instance.
+- It shares configuration values by copying the parent’s primitives and token definitions.
+- It begins with the parent’s current context plus overrides.
+- Parent and child mutations do not automatically propagate to one another.
+- Each child has its own subscribers and resolved DNA.
+- The child expresses CSS properties on the supplied element.
+- `scope()` must run where an `HTMLElement` exists.
+
+## Related APIs
+
+- [`mutate()`](/docs/core/mutate)
+- [`subscribe()`](/docs/core/subscribe)
+- [`getTrait()`](/docs/core/get-trait)
+- [Scoped component themes](/docs/guides/scoped-component-themes)

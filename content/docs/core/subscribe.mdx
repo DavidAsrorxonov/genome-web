@@ -1,0 +1,251 @@
+---
+title: subscribe()
+description: Run a listener after GenomeJS resolves mutations and expresses updated values.
+---
+
+`subscribe()` registers a listener that runs whenever the Genome finishes a resolution cycle.
+
+## Signature
+
+```ts
+genome.subscribe(
+  listener: () => void,
+): () => void
+```
+
+## Parameters
+
+| Parameter  | Type         | Description                                                    |
+| ---------- | ------------ | -------------------------------------------------------------- |
+| `listener` | `() => void` | Function called after the Genome resolves and expresses values |
+
+## Return value
+
+The method returns an unsubscribe function:
+
+```ts
+() => void
+```
+
+Call it to remove the listener.
+
+## Basic example
+
+```ts
+const unsubscribe = genome.subscribe(() => {
+  console.log("Genome updated");
+});
+
+genome.mutate({
+  mode: "dark",
+});
+
+unsubscribe();
+```
+
+After `unsubscribe()` is called, later mutations no longer invoke that listener.
+
+## Reading values inside a listener
+
+The listener receives no arguments.
+
+Use `getTrait()` to read the latest resolved values:
+
+```ts
+const unsubscribe = genome.subscribe(() => {
+  const surface = genome.getTrait("surface");
+
+  const foreground = genome.getTrait("foreground");
+
+  console.log({
+    surface,
+    foreground,
+  });
+});
+```
+
+## Notification order
+
+During mutation, GenomeJS performs these operations synchronously:
+
+```text
+1. Merge context
+2. Resolve derived values
+3. Express changed CSS properties
+4. Notify subscribers
+```
+
+This means a listener can read the latest values and inspect the updated CSS output.
+
+```ts
+const unsubscribe = genome.subscribe(() => {
+  console.log(genome.getTrait("spacing"));
+
+  console.log(document.documentElement.style.getPropertyValue("--g-spacing"));
+});
+```
+
+## Subscribers run after every resolution
+
+A subscriber is notified after a mutation even when the final CSS values are unchanged.
+
+```ts
+genome.mutate({
+  scale: 1,
+});
+```
+
+If the resolved value remains the same:
+
+- GenomeJS skips the identical CSS write.
+- Subscribers are still notified.
+
+A subscriber that only cares about one token can compare the previous and next values.
+
+```ts
+let previous = genome.getTrait("spacing");
+
+const unsubscribe = genome.subscribe(() => {
+  const next = genome.getTrait("spacing");
+
+  if (next === previous) {
+    return;
+  }
+
+  previous = next;
+
+  console.log("Spacing changed:", next);
+});
+```
+
+## Multiple subscribers
+
+```ts
+const unsubscribeLogger = genome.subscribe(() => {
+  console.log("Updated");
+});
+
+const unsubscribeRenderer = genome.subscribe(() => {
+  renderPreview();
+});
+```
+
+Both listeners run after resolution.
+
+Clean them up independently:
+
+```ts
+unsubscribeLogger();
+unsubscribeRenderer();
+```
+
+## Browser event integration
+
+```ts
+const output = document.querySelector<HTMLElement>("[data-token-output]");
+
+const unsubscribe = genome.subscribe(() => {
+  if (!output) {
+    return;
+  }
+
+  output.textContent = String(genome.getTrait("spacing"));
+});
+```
+
+## React integration
+
+Most React components should use `useGenomeTrait()` rather than calling `subscribe()` manually.
+
+```tsx
+const spacing = useGenomeTrait(genome, "spacing");
+```
+
+The React adapter connects the subscription to `useSyncExternalStore`.
+
+Manual subscription is still useful for:
+
+- Logging
+- Imperative integrations
+- Non-React code
+- Updating third-party libraries
+- Coordinating external stores
+
+## Vue integration
+
+The Vue adapter subscribes when the component mounts and cleans up when it unmounts:
+
+```ts
+const spacing = useGenomeTrait(genome, "spacing");
+```
+
+It returns a Vue ref.
+
+## Svelte integration
+
+The Svelte adapter uses Genome subscriptions inside a rune-aware reactive wrapper:
+
+```ts
+const spacing = genomeTrait(genome, "spacing");
+```
+
+Read its current value with:
+
+```ts
+spacing.value;
+```
+
+## Cleanup
+
+Always keep and call the returned cleanup function for manual subscriptions.
+
+```ts
+const unsubscribe = genome.subscribe(listener);
+
+// Later
+unsubscribe();
+```
+
+Failing to unsubscribe may keep unused listeners registered for the lifetime of the Genome instance.
+
+## Listener errors
+
+GenomeJS does not currently catch errors thrown by listeners.
+
+```ts
+genome.subscribe(() => {
+  throw new Error("Subscriber failed");
+});
+```
+
+That error propagates from the mutation or resolution call that triggered the listener.
+
+Keep listeners small and handle expected failures inside them.
+
+```ts
+genome.subscribe(() => {
+  try {
+    synchronizeExternalSystem();
+  } catch (error) {
+    console.error(error);
+  }
+});
+```
+
+## Notes
+
+- Listeners receive no arguments.
+- Listeners run synchronously.
+- Notifications occur after CSS expression.
+- A listener runs after every resolution cycle.
+- The returned function removes that listener.
+- Reading a trait does not automatically subscribe.
+- Framework adapters manage subscriptions for components.
+
+## Related APIs
+
+- [`getTrait()`](/docs/core/get-trait)
+- [`mutate()`](/docs/core/mutate)
+- [React adapter](/docs/frameworks/react)
+- [Vue adapter](/docs/frameworks/vue)
+- [Svelte adapter](/docs/frameworks/svelte)

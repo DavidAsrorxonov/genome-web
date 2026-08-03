@@ -1,0 +1,322 @@
+---
+title: mutate()
+description: Merge runtime context changes and resolve the Genome token system again.
+---
+
+`mutate()` updates runtime context and causes all derived tokens to resolve again.
+
+## Signature
+
+```ts
+genome.mutate(
+  patch: RuntimeContext,
+): void
+```
+
+## Parameters
+
+| Parameter | Type             | Description                                                  |
+| --------- | ---------------- | ------------------------------------------------------------ |
+| `patch`   | `RuntimeContext` | Context properties to merge into the current runtime context |
+
+`RuntimeContext` is an open record:
+
+```ts
+interface RuntimeContext {
+  [key: string]: unknown;
+}
+```
+
+## Return value
+
+```ts
+void
+```
+
+`mutate()` updates the existing Genome instance. It does not return a new instance.
+
+## Basic example
+
+```ts
+import { Genome } from "@genomejs/core";
+
+const genome = new Genome({
+  primitives: {
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    spacing: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.baseSpacing) * scale}px`;
+    },
+  },
+});
+
+genome.mutate({
+  scale: 1.5,
+});
+
+genome.getTrait("spacing");
+// "24px"
+```
+
+## Shallow context merge
+
+Each patch is shallowly merged with the current context.
+
+Given:
+
+```ts
+genome.mutate({
+  mode: "light",
+  scale: 1,
+});
+```
+
+The current context is conceptually:
+
+```ts
+{
+  mode: "light",
+  scale: 1,
+}
+```
+
+Calling:
+
+```ts
+genome.mutate({
+  mode: "dark",
+});
+```
+
+Produces:
+
+```ts
+{
+  mode: "dark",
+  scale: 1,
+}
+```
+
+The `scale` property remains unchanged because it was not included in the second patch.
+
+## Nested values are replaced
+
+`mutate()` does not perform a deep merge.
+
+```ts
+genome.mutate({
+  viewport: {
+    width: 1280,
+    height: 720,
+  },
+});
+```
+
+A later patch replaces the entire `viewport` value:
+
+```ts
+genome.mutate({
+  viewport: {
+    width: 768,
+  },
+});
+```
+
+The resulting nested value is conceptually:
+
+```ts
+{
+  viewport: {
+    width: 768,
+  },
+}
+```
+
+The previous `height` property is not preserved.
+
+Prefer flat context properties when practical:
+
+```ts
+genome.mutate({
+  viewportWidth: 768,
+  viewportHeight: 720,
+});
+```
+
+## What happens during mutation?
+
+When `mutate()` is called, GenomeJS:
+
+1. Merges the patch into the current context
+2. Runs all derived token functions again
+3. Stores the newly resolved DNA values
+4. Expresses changed values as CSS custom properties
+5. Notifies every subscriber
+
+```text
+Context patch
+     ↓
+Context merge
+     ↓
+Token resolution
+     ↓
+CSS expression
+     ↓
+Subscriber notification
+```
+
+## CSS values are diffed
+
+Derived token functions currently resolve after every mutation, but CSS custom properties are only rewritten when their final string value changes.
+
+```ts
+const genome = new Genome({
+  primitives: {
+    spacing: 16,
+  },
+
+  tokens: {
+    gap: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.spacing) * scale}px`;
+    },
+  },
+});
+
+genome.mutate({
+  scale: 1,
+});
+```
+
+If `--g-gap` was already `16px`, GenomeJS does not perform an identical CSS write.
+
+Subscribers are still notified after the resolution cycle.
+
+## Mutating multiple context values
+
+A patch may contain any number of context properties:
+
+```ts
+genome.mutate({
+  mode: "dark",
+  density: "compact",
+  scale: 1.25,
+  containerWidth: 640,
+});
+```
+
+Any token may read one or more of those values:
+
+```ts
+const tokens = {
+  surface: (_dna, context) => (context.mode === "dark" ? "#121620" : "#ffffff"),
+
+  controlHeight: (_dna, context) =>
+    context.density === "compact" ? "36px" : "44px",
+
+  columns: (_dna, context) => {
+    const width =
+      typeof context.containerWidth === "number" ? context.containerWidth : 0;
+
+    return width >= 720 ? 3 : 1;
+  },
+};
+```
+
+## Context values are not validated automatically
+
+GenomeJS accepts arbitrary context values.
+
+This is valid at the type level:
+
+```ts
+genome.mutate({
+  scale: "large",
+});
+```
+
+A token expecting a number must validate or convert the value:
+
+```ts
+const scale = typeof context.scale === "number" ? context.scale : 1;
+```
+
+## Mutating from browser events
+
+```ts
+const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+function updateMode() {
+  genome.mutate({
+    mode: mediaQuery.matches ? "dark" : "light",
+  });
+}
+
+updateMode();
+
+mediaQuery.addEventListener("change", updateMode);
+```
+
+GenomeJS also provides `bindMediaQueries()` for common media-query bindings.
+
+## Mutating from React
+
+```tsx
+"use client";
+
+import { useGenomeTrait } from "@genomejs/react";
+
+function DensityControl() {
+  const height = useGenomeTrait(genome, "controlHeight");
+
+  return (
+    <div>
+      <p>Current height: {height}</p>
+
+      <button
+        type="button"
+        onClick={() => {
+          genome.mutate({
+            density: "compact",
+          });
+        }}
+      >
+        Use compact density
+      </button>
+    </div>
+  );
+}
+```
+
+## Error behavior
+
+`mutate()` does not validate the context patch itself.
+
+It may throw when:
+
+- A token function throws during resolution
+- A context value is used incorrectly by a token
+- A subscriber throws while being notified
+
+Graph errors such as unresolved DNA references and circular dependencies normally occur during Genome construction, before mutation.
+
+## Notes
+
+- Context patches are shallowly merged.
+- All derived token functions currently resolve after each mutation.
+- CSS writes are skipped when the final string value is unchanged.
+- Subscribers run after resolution and CSS expression.
+- `mutate()` operates synchronously.
+- The method does not return the new DNA or context.
+
+## Related APIs
+
+- [`getTrait()`](/docs/core/get-trait)
+- [`subscribe()`](/docs/core/subscribe)
+- [`scope()`](/docs/core/scope)
+- [Context](/docs/core/context)
