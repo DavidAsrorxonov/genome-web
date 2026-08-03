@@ -57,7 +57,9 @@ function WithoutGenomeCode() {
 
         <CodeLine number={2}>
           {"  "}
-          <span className="text-muted-foreground">// duplicated values</span>
+          <span className="text-muted-foreground">
+            {"// duplicated values"}
+          </span>
         </CodeLine>
 
         <CodeLine number={3}>{"};"}</CodeLine>
@@ -71,7 +73,7 @@ function WithoutGenomeCode() {
         <CodeLine number={6}>
           {"  "}
           <span className="text-muted-foreground">
-            // more duplicated values
+            {"// more duplicated values"}
           </span>
         </CodeLine>
 
@@ -86,7 +88,7 @@ function WithoutGenomeCode() {
         <CodeLine number={10}>
           {"  "}
           <span className="text-muted-foreground">
-            // another branch to maintain
+            {"// another branch to maintain"}
           </span>
         </CodeLine>
 
@@ -137,7 +139,7 @@ function WithGenomeCode() {
 
         <CodeLine number={10}>
           <span className="text-muted-foreground">
-            // --g-foreground updates
+            {"// --g-foreground updates"}
           </span>
         </CodeLine>
       </code>
