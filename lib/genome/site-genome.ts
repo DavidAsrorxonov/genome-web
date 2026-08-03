@@ -28,30 +28,30 @@ function isHighContrast(context: RuntimeContext): boolean {
 
 export const siteGenomeConfig = {
   primitives: {
-    violet: "oklch(0.8700 0.2200 122.0000)",
-    violetStrong: "oklch(0.8700 0.2200 122.0000)",
-    teal: "oklch(0.7500 0.2000 124.0000)",
-    danger: "oklch(0.6368 0.2078 25.3313)",
+    violet: "oklch(0.6996 0.2020 44.4414)",
+    violetStrong: "oklch(0.6996 0.2020 44.4414)",
+    teal: "oklch(0.7653 0.1306 194.7689)",
+    danger: "oklch(0.6280 0.2577 29.2339)",
 
-    darkBackground: "oklch(0.1100 0.0100 110.0000)",
-    darkSurface: "oklch(0.1500 0.0120 110.0000)",
-    darkSurfaceRaised: "oklch(0.2200 0.0150 110.0000)",
-    darkForeground: "oklch(0.9600 0.0150 110.0000)",
-    darkMutedForeground: "oklch(0.5800 0.0150 110.0000)",
-    darkBorder: "oklch(0.2600 0.0150 110.0000)",
-    darkBorderStrong: "oklch(0.2600 0.0150 110.0000)",
-    darkAccent: "oklch(0.2400 0.0400 122.0000)",
+    darkBackground: "oklch(0.1822 0 0)",
+    darkSurface: "oklch(0.2178 0 0)",
+    darkSurfaceRaised: "oklch(0.3211 0 0)",
+    darkForeground: "oklch(0.9612 0 0)",
+    darkMutedForeground: "oklch(0.7252 0 0)",
+    darkBorder: "oklch(0.3715 0 0)",
+    darkBorderStrong: "oklch(0.3715 0 0)",
+    darkAccent: "oklch(0.7512 0.1680 52.0772)",
 
-    lightBackground: "oklch(0.9820 0.0040 110.0000)",
-    lightSurface: "oklch(1 0 0)",
-    lightSurfaceRaised: "oklch(0.9350 0.0080 110.0000)",
-    lightForeground: "oklch(0.1700 0.0150 110.0000)",
-    lightMutedForeground: "oklch(0.5000 0.0150 110.0000)",
-    lightBorder: "oklch(0.8800 0.0100 110.0000)",
-    lightBorderStrong: "oklch(0.8800 0.0100 110.0000)",
-    lightAccent: "oklch(0.9200 0.0550 122.0000)",
+    lightBackground: "oklch(0.9851 0 0)",
+    lightSurface: "oklch(0.9702 0 0)",
+    lightSurfaceRaised: "oklch(0.9219 0 0)",
+    lightForeground: "oklch(0.1448 0 0)",
+    lightMutedForeground: "oklch(0.4495 0 0)",
+    lightBorder: "oklch(0.8514 0 0)",
+    lightBorderStrong: "oklch(0.8514 0 0)",
+    lightAccent: "oklch(0.7512 0.1680 52.0772)",
 
-    baseRadius: 0.875,
+    baseRadius: 0,
     baseSpacing: 4,
   },
 
@@ -75,7 +75,7 @@ export const siteGenomeConfig = {
     primary: (dna, context) =>
       readMode(context) === "light" ? dna.violetStrong : dna.violet,
 
-    primaryForeground: () => "oklch(0.1200 0.0200 110.0000)",
+    primaryForeground: () => "oklch(0 0 0)",
 
     secondary: (dna, context) =>
       readMode(context) === "light"
@@ -103,7 +103,7 @@ export const siteGenomeConfig = {
 
     destructive: (dna) => dna.danger,
 
-    destructiveForeground: () => "oklch(1.0000 0 0)",
+    destructiveForeground: () => "oklch(0.9851 0 0)",
 
     border: (dna, context) => {
       const light = readMode(context) === "light";

@@ -625,7 +625,7 @@ export function HeroCompilerDemo() {
                   style={{
                     minHeight: "var(--g-control-height, 40px)",
                     borderRadius: "var(--g-panel-radius, 12px)",
-                    backgroundColor: "var(--g-button-color, #bde900)",
+                    backgroundColor: "var(--g-button-color, #ff6900)",
                     color: "var(--g-button-text, #ffffff)",
                   }}
                 >

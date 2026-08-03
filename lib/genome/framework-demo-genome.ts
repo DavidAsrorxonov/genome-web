@@ -24,12 +24,12 @@ function readDensity(context: RuntimeContext): FrameworkDemoDensity {
 
 export const frameworkDemoConfig = {
   primitives: {
-    violet: "#bde900",
-    teal: "#94c100",
+    violet: "#ff6900",
+    teal: "#00cccc",
 
-    surface: "#0b0c06",
-    foreground: "#f2f3e8",
-    mutedForeground: "#7b7b71",
+    surface: "#1a1a1a",
+    foreground: "#f2f2f2",
+    mutedForeground: "#a6a6a6",
 
     comfortableGap: 16,
     compactGap: 10,

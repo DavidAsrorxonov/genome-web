@@ -51,7 +51,7 @@ const frameworks: Framework[] = [
 
 const genome = new Genome({
   primitives: {
-    color: "#bde900",
+    color: "#ff6900",
   },
 
   tokens: {
@@ -244,8 +244,8 @@ function LiveFrameworkPreview({ framework }: { framework: Framework }) {
         <span
           className="rounded-full border px-2.5 py-1 font-mono text-[10px]"
           style={{
-            borderColor: "var(--g-demo-accent, #bde900)",
-            color: "var(--g-demo-accent, #bde900)",
+            borderColor: "var(--g-demo-accent, #ff6900)",
+            color: "var(--g-demo-accent, #ff6900)",
           }}
         >
           connected
@@ -257,10 +257,10 @@ function LiveFrameworkPreview({ framework }: { framework: Framework }) {
         style={{
           gap: "var(--g-demo-gap, 16px)",
           borderRadius: "var(--g-demo-radius, 18px)",
-          backgroundColor: "var(--g-demo-surface, #0b0c06)",
-          color: "var(--g-demo-foreground, #f2f3e8)",
+          backgroundColor: "var(--g-demo-surface, #1a1a1a)",
+          color: "var(--g-demo-foreground, #f2f2f2)",
           borderColor:
-            "color-mix(in srgb, var(--g-demo-accent, #bde900) 32%, transparent)",
+            "color-mix(in srgb, var(--g-demo-accent, #ff6900) 32%, transparent)",
         }}
       >
         <div>
@@ -269,7 +269,7 @@ function LiveFrameworkPreview({ framework }: { framework: Framework }) {
           <p
             className="mt-1 text-xs leading-5"
             style={{
-              color: "var(--g-demo-muted-foreground, #7b7b71)",
+              color: "var(--g-demo-muted-foreground, #a6a6a6)",
             }}
           >
             The adapter exposes the same resolved Core state using its
@@ -283,7 +283,7 @@ function LiveFrameworkPreview({ framework }: { framework: Framework }) {
           style={{
             minHeight: "var(--g-demo-control-height, 42px)",
             borderRadius: "var(--g-demo-radius, 18px)",
-            backgroundColor: "var(--g-demo-accent, #bde900)",
+            backgroundColor: "var(--g-demo-accent, #ff6900)",
             color: "#ffffff",
           }}
           onClick={mutatePreview}
