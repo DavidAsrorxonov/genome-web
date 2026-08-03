@@ -1,0 +1,11 @@
+{
+  "title": "Reference",
+  "description": "Complete GenomeJS API, errors, types, and runtime support reference.",
+  "defaultOpen": true,
+  "pages": [
+    "api-reference",
+    "error-reference",
+    "typescript-types",
+    "browser-support"
+  ]
+}

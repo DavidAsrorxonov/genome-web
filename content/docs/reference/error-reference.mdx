@@ -1,0 +1,607 @@
+---
+title: Error Reference
+description: Understand GenomeJS graph errors, unknown traits, token failures, subscriber errors, and browser setup failures.
+---
+
+GenomeJS reports invalid dependency graphs while a Genome is being constructed.
+
+Other failures may occur later during token resolution, mutation, subscription notification, or browser-environment binding.
+
+## Error categories
+
+| Category                 | Typical timing                          |
+| ------------------------ | --------------------------------------- |
+| Circular dependency      | Genome construction or scope creation   |
+| Unresolved DNA reference | Genome construction or scope creation   |
+| Unknown trait            | `getTrait()` or framework snapshot read |
+| Token function failure   | Construction or mutation                |
+| Subscriber failure       | Mutation after resolution               |
+| Browser API failure      | Binding setup or environment change     |
+| Invalid target           | CSS expression or scope creation        |
+
+## `CircularDependencyError`
+
+`CircularDependencyError` is thrown when the derived-token graph cannot be resolved because token relationships form a cycle.
+
+## Import
+
+```ts
+import { CircularDependencyError } from "@genomejs/core";
+```
+
+## Class shape
+
+```ts
+class CircularDependencyError extends Error {
+  readonly cycle: string[];
+}
+```
+
+## Public properties
+
+| Property  | Type                        | Description                                            |
+| --------- | --------------------------- | ------------------------------------------------------ |
+| `name`    | `"CircularDependencyError"` | Error class name                                       |
+| `message` | `string`                    | Formatted dependency path                              |
+| `cycle`   | `string[]`                  | Ordered token names associated with the detected cycle |
+
+## Example
+
+```ts
+const genome = new Genome({
+  primitives: {},
+
+  tokens: {
+    first: (dna) => Number(dna.second),
+
+    second: (dna) => Number(dna.first),
+  },
+});
+```
+
+Example message:
+
+```text
+Circular token dependency: first -> second -> first
+```
+
+## Handle the error
+
+```ts
+import { CircularDependencyError, Genome } from "@genomejs/core";
+
+try {
+  const genome = new Genome(config);
+} catch (error) {
+  if (error instanceof CircularDependencyError) {
+    console.error("Circular token graph:", error.cycle);
+  } else {
+    throw error;
+  }
+}
+```
+
+## Common causes
+
+### Two-token cycle
+
+```text
+first → second → first
+```
+
+### Longer cycle
+
+```text
+surface
+   ↓
+foreground
+   ↓
+border
+   ↓
+surface
+```
+
+### Indirect helper relationships
+
+A cycle may be less obvious when token functions are far apart in the configuration.
+
+```ts
+const tokens = {
+  cardSurface: (dna) => dna.elevatedSurface,
+
+  elevatedSurface: (dna) => dna.shadowColor,
+
+  shadowColor: (dna) => dna.cardSurface,
+};
+```
+
+## Fixing a cycle
+
+Identify the value that should be a source rather than a result.
+
+Before:
+
+```text
+surface → foreground
+foreground → surface
+```
+
+After:
+
+```text
+baseSurface ──→ surface
+baseForeground ──→ foreground
+surface ──→ foreground
+```
+
+Place stable source values in `primitives`.
+
+---
+
+## `UnresolvedTokenError`
+
+`UnresolvedTokenError` is thrown when a derived token reads one or more DNA properties that are not known primitives or derived functions.
+
+## Import
+
+```ts
+import { UnresolvedTokenError } from "@genomejs/core";
+```
+
+## Class shape
+
+```ts
+class UnresolvedTokenError extends Error {
+  readonly token: string;
+
+  readonly missing: string[];
+}
+```
+
+## Public properties
+
+| Property  | Type                     | Description                                     |
+| --------- | ------------------------ | ----------------------------------------------- |
+| `name`    | `"UnresolvedTokenError"` | Error class name                                |
+| `message` | `string`                 | Token and missing names                         |
+| `token`   | `string`                 | Derived token whose dependencies are unresolved |
+| `missing` | `string[]`               | Missing DNA property names                      |
+
+## Example
+
+```ts
+const genome = new Genome({
+  primitives: {},
+
+  tokens: {
+    surface: (dna) => dna.missingSurface,
+  },
+});
+```
+
+Message:
+
+```text
+Token "surface" references undefined token(s): missingSurface
+```
+
+## Multiple missing references
+
+```ts
+const genome = new Genome({
+  primitives: {},
+
+  tokens: {
+    border: (dna) => `${dna.missingWidth} solid ${dna.missingColor}`,
+  },
+});
+```
+
+The error’s `missing` property contains both names.
+
+## Handle the error
+
+```ts
+import { Genome, UnresolvedTokenError } from "@genomejs/core";
+
+try {
+  const genome = new Genome(config);
+} catch (error) {
+  if (error instanceof UnresolvedTokenError) {
+    console.error(`Token ${error.token} is missing:`, error.missing);
+  } else {
+    throw error;
+  }
+}
+```
+
+## Common causes
+
+### Spelling mistake
+
+```ts
+primitives: {
+  background: "#ffffff",
+},
+
+tokens: {
+  surface: (dna) =>
+    dna.backgound,
+}
+```
+
+### Reading context from `dna`
+
+Incorrect:
+
+```ts
+const tokens = {
+  surface: (dna) => (dna.mode === "dark" ? "#000000" : "#ffffff"),
+};
+```
+
+Runtime context is the second parameter:
+
+```ts
+const tokens = {
+  surface: (_dna, context) => (context.mode === "dark" ? "#000000" : "#ffffff"),
+};
+```
+
+### Static value placed under `tokens`
+
+The current public type permits:
+
+```ts
+tokens: {
+  baseRadius: 12,
+}
+```
+
+However, the current compiler only includes function-valued entries when building and resolving the derived-token graph.
+
+Use:
+
+```ts
+primitives: {
+  baseRadius: 12,
+}
+```
+
+A derived function reading a static value placed under `tokens` may therefore report that name as unresolved.
+
+---
+
+## Unknown trait error
+
+Calling `getTrait()` with a name absent from the current resolved DNA throws a standard `Error`.
+
+```ts
+genome.getTrait("missingTrait");
+```
+
+Message:
+
+```text
+Unknown token: "missingTrait"
+```
+
+This is not currently an instance of:
+
+```ts
+UnresolvedTokenError;
+```
+
+## Handle an unknown trait
+
+```ts
+try {
+  const value = genome.getTrait(name);
+} catch (error) {
+  if (error instanceof Error && error.message.startsWith("Unknown token:")) {
+    console.error("Check the trait name.");
+  } else {
+    throw error;
+  }
+}
+```
+
+The public API does not currently provide:
+
+```ts
+genome.hasTrait(name);
+```
+
+Prefer known configuration keys rather than using exceptions as ordinary control flow.
+
+## Framework adapter behavior
+
+All adapters ultimately read through:
+
+```ts
+genome.getTrait(name);
+```
+
+An unknown name may therefore surface during:
+
+- React render or snapshot reading
+- Vue composable initialization
+- Svelte wrapper initialization
+- A later adapter subscription update
+
+Example:
+
+```tsx
+const value = useGenomeTrait(genome, "missingTrait");
+```
+
+This throws rather than returning `undefined`.
+
+---
+
+## Token function errors
+
+GenomeJS does not wrap ordinary exceptions thrown by token functions.
+
+```ts
+const tokens = {
+  spacing: (_dna, context) => {
+    if (typeof context.scale !== "number") {
+      throw new Error("scale must be a number");
+    }
+
+    return context.scale * 16;
+  },
+};
+```
+
+This may throw:
+
+- During initial resolution in the constructor
+- During `mutate()`
+- During child creation with `scope()`
+
+## Tracking pass and actual resolution
+
+GenomeJS first runs derived functions with a recording DNA proxy to discover property reads.
+
+Exceptions from this tracking pass are ignored after touched dependencies have been recorded.
+
+The token function is then run normally during actual resolution.
+
+An exception during actual resolution propagates to the caller.
+
+This allows dependency tracking to continue even when an inert tracking value is unsuitable for part of a token’s calculation.
+
+It does not suppress real runtime failures.
+
+## Defensive context handling
+
+Prefer fallbacks and type narrowing:
+
+```ts
+const scale = typeof context.scale === "number" ? context.scale : 1;
+```
+
+Use explicit errors when silent fallback would hide invalid application state:
+
+```ts
+function requireNumber(value: unknown, name: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new TypeError(`${name} must be a finite number.`);
+  }
+
+  return value;
+}
+```
+
+---
+
+## Subscriber errors
+
+Subscriber callbacks are called synchronously after token resolution and CSS expression.
+
+GenomeJS does not catch subscriber exceptions.
+
+```ts
+genome.subscribe(() => {
+  throw new Error("External synchronization failed.");
+});
+```
+
+A later mutation propagates the error:
+
+```ts
+genome.mutate({
+  mode: "dark",
+});
+```
+
+## Safer subscriber
+
+```ts
+genome.subscribe(() => {
+  try {
+    synchronizeExternalSystem();
+  } catch (error) {
+    console.error("Synchronization failed:", error);
+  }
+});
+```
+
+A failing subscriber may prevent later subscribers in the current iteration from running, depending on where the exception occurs.
+
+Keep subscribers small and predictable.
+
+---
+
+## Browser environment errors
+
+### `window` is unavailable
+
+This fails during server rendering:
+
+```ts
+bindMediaQueries(genome);
+```
+
+Possible error:
+
+```text
+ReferenceError: window is not defined
+```
+
+Call it inside a browser lifecycle.
+
+### `matchMedia` is unavailable
+
+`bindMediaQueries()` expects:
+
+```ts
+window.matchMedia;
+```
+
+An environment without it may throw a `TypeError`.
+
+### `ResizeObserver` is unavailable
+
+This fails in environments without `ResizeObserver`:
+
+```ts
+bindContainerSize(genome, element);
+```
+
+Possible error:
+
+```text
+ReferenceError: ResizeObserver is not defined
+```
+
+Use a browser implementation, test mock, or appropriate polyfill.
+
+### Invalid target
+
+The `Genome` constructor accepts:
+
+```ts
+HTMLElement | null;
+```
+
+And `scope()` accepts:
+
+```ts
+HTMLElement;
+```
+
+Passing an invalid value outside TypeScript may fail when GenomeJS accesses:
+
+```ts
+target.style.setProperty(...)
+```
+
+Validate dynamically obtained targets:
+
+```ts
+const element = document.querySelector<HTMLElement>("[data-theme-root]");
+
+if (!element) {
+  throw new Error("Theme target was not found.");
+}
+```
+
+---
+
+## Utility input failures
+
+### Invalid contrast colors
+
+`contrastRatio()` and `lockContrast()` do not currently provide dedicated validation errors.
+
+Unsupported color strings may produce incorrect values or `NaN`.
+
+Validate six-digit hexadecimal input:
+
+```ts
+function assertHexColor(value: string): void {
+  if (!/^#[0-9a-f]{6}$/i.test(value)) {
+    throw new TypeError(`Invalid hex color: ${value}`);
+  }
+}
+```
+
+### Invalid `fluidScale()` ranges
+
+The function does not validate equal or reversed viewport ranges.
+
+Avoid:
+
+```ts
+fluidScale(16, 32, 640, 640);
+```
+
+Validate dynamic values before calling it.
+
+---
+
+## Error timing summary
+
+### During `new Genome()`
+
+Possible failures:
+
+- `UnresolvedTokenError`
+- `CircularDependencyError`
+- Token function exception
+- Invalid target during CSS expression
+- CSS target method exception
+
+### During `mutate()`
+
+Possible failures:
+
+- Token function exception
+- CSS expression exception
+- Subscriber exception
+
+### During `getTrait()`
+
+Possible failure:
+
+- Standard unknown-token `Error`
+
+### During `scope()`
+
+Possible failures:
+
+- Graph errors during child construction
+- Token errors during initial child construction
+- Token errors during inherited-context mutation
+- Invalid target errors
+- Subscriber errors created during child setup
+
+### During browser bindings
+
+Possible failures:
+
+- Missing browser APIs
+- Token errors caused by binding mutations
+- Subscriber errors caused by binding mutations
+
+## Error-handling recommendations
+
+- Let graph errors fail during development.
+- Validate external theme configuration before construction.
+- Narrow runtime context values inside tokens.
+- Validate external colors and numeric ranges.
+- Keep subscribers small.
+- Use browser bindings only after mounting.
+- Always clean up listeners and observers.
+- Log the structured fields on GenomeJS error classes.
+- Avoid hiding graph errors behind broad catch blocks.
+
+## Related pages
+
+- [API Reference](/docs/reference/api-reference)
+- [TypeScript Types](/docs/reference/typescript-types)
+- [Browser Support](/docs/reference/browser-support)
+- [Tokens](/docs/core/tokens)

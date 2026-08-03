@@ -1,0 +1,589 @@
+---
+title: TypeScript Types
+description: Reference the public GenomeJS Core types and patterns for application-specific context typing.
+---
+
+`@genomejs/core` exports seven public TypeScript types.
+
+```ts
+import type {
+  Primitive,
+  RuntimeContext,
+  DNAReader,
+  TokenFn,
+  TokenDefinition,
+  GenomeConfig,
+  Mutator,
+} from "@genomejs/core";
+```
+
+## `Primitive`
+
+```ts
+type Primitive = string | number;
+```
+
+A resolved Genome value is currently either a string or a number.
+
+Examples:
+
+```ts
+const color: Primitive = "#7c6cff";
+
+const spacing: Primitive = 16;
+
+const radius: Primitive = "12px";
+```
+
+Not included:
+
+```ts
+boolean
+null
+undefined
+object
+array
+function
+```
+
+Context may contain those values because context uses `unknown`, but primitives and resolved token outputs may not.
+
+## `RuntimeContext`
+
+```ts
+interface RuntimeContext {
+  [key: string]: unknown;
+}
+```
+
+Runtime context is intentionally open.
+
+```ts
+const patch: RuntimeContext = {
+  mode: "dark",
+  scale: 1.25,
+  reducedMotion: true,
+  containerWidth: 720,
+};
+```
+
+Because each value is `unknown`, tokens should narrow values before using them.
+
+```ts
+const scale = typeof context.scale === "number" ? context.scale : 1;
+```
+
+## Application-specific context
+
+Create a strongly typed application model:
+
+```ts
+export interface AppThemeContext {
+  mode: "light" | "dark";
+
+  density: "comfortable" | "compact";
+
+  scale: number;
+
+  reducedMotion: boolean;
+}
+```
+
+Then create typed helper functions that accept Genome’s open context:
+
+```ts
+import type { RuntimeContext } from "@genomejs/core";
+
+function readMode(context: RuntimeContext): AppThemeContext["mode"] {
+  return context.mode === "dark" ? "dark" : "light";
+}
+```
+
+```ts
+function readScale(context: RuntimeContext): number {
+  return typeof context.scale === "number" && Number.isFinite(context.scale)
+    ? context.scale
+    : 1;
+}
+```
+
+This keeps the public Genome type flexible while making token assumptions explicit.
+
+## Typed mutation helper
+
+`mutate()` accepts `RuntimeContext`, so unknown keys are allowed.
+
+Wrap mutation when your application needs stricter patches:
+
+```ts
+type ThemePatch = Partial<AppThemeContext>;
+
+function mutateTheme(patch: ThemePatch): void {
+  themeGenome.mutate(patch);
+}
+```
+
+Now TypeScript catches:
+
+```ts
+mutateTheme({
+  mode: "blue",
+});
+```
+
+And unknown keys:
+
+```ts
+mutateTheme({
+  colourMode: "dark",
+});
+```
+
+The underlying Genome instance remains framework-neutral.
+
+## `Mutator`
+
+```ts
+type Mutator = RuntimeContext;
+```
+
+`Mutator` is currently an alias for the open runtime context record.
+
+```ts
+const patch: Mutator = {
+  mode: "dark",
+};
+```
+
+It does not currently represent a function.
+
+## `DNAReader`
+
+```ts
+type DNAReader = Record<string, Primitive>;
+```
+
+A token’s `dna` argument exposes resolved primitive values by name.
+
+```ts
+const token: TokenFn = (dna) => Number(dna.baseSpacing) * 2;
+```
+
+Because `DNAReader` is a generic string record, TypeScript does not currently infer exact token keys.
+
+This is accepted:
+
+```ts
+dna.misspelledToken;
+```
+
+The runtime compiler catches the missing reference during Genome construction.
+
+## Application-specific DNA type
+
+For local helper functions, define a narrower shape:
+
+```ts
+interface ThemeDNA {
+  baseSpacing: number;
+
+  lightSurface: string;
+
+  darkSurface: string;
+}
+```
+
+A token function must still satisfy Genome’s public `TokenFn` signature.
+
+You can narrow values inside a helper:
+
+```ts
+function readBaseSpacing(dna: DNAReader): number {
+  return Number(dna.baseSpacing);
+}
+```
+
+Avoid casting the entire `dna` object without validation when configuration may be dynamic.
+
+## `TokenFn`
+
+```ts
+type TokenFn = (dna: DNAReader, context: RuntimeContext) => Primitive;
+```
+
+Example:
+
+```ts
+const spacingToken: TokenFn = (dna, context) => {
+  const scale = typeof context.scale === "number" ? context.scale : 1;
+
+  return `${Number(dna.baseSpacing) * scale}px`;
+};
+```
+
+A token function must return:
+
+```ts
+string | number;
+```
+
+This is invalid:
+
+```ts
+const invalidToken: TokenFn = () => ({
+  value: 16,
+});
+```
+
+## Pure token functions
+
+Token functions may run:
+
+- During dependency tracking
+- During initial resolution
+- After mutations
+- During scope construction
+
+Keep them free of side effects.
+
+```ts
+const safeToken: TokenFn = (dna) => Number(dna.baseSpacing) * 2;
+```
+
+## `TokenDefinition`
+
+```ts
+type TokenDefinition = Primitive | TokenFn;
+```
+
+This public type currently allows:
+
+```ts
+tokens: {
+  radius: 12,
+}
+```
+
+However, the current compiler only identifies function-valued token entries as derived keys.
+
+Static design values should therefore be placed under:
+
+```ts
+primitives;
+```
+
+Use:
+
+```ts
+const config = {
+  primitives: {
+    radius: 12,
+  },
+
+  tokens: {},
+} satisfies GenomeConfig;
+```
+
+Or derive a token through a function:
+
+```ts
+const config = {
+  primitives: {
+    baseRadius: 12,
+  },
+
+  tokens: {
+    radius: (dna) => dna.baseRadius,
+  },
+} satisfies GenomeConfig;
+```
+
+This public-type/runtime mismatch is a current limitation.
+
+## `GenomeConfig`
+
+```ts
+interface GenomeConfig {
+  primitives: Record<string, Primitive>;
+
+  tokens: Record<string, TokenDefinition>;
+}
+```
+
+## Basic configuration
+
+```ts
+import type { GenomeConfig } from "@genomejs/core";
+
+const config: GenomeConfig = {
+  primitives: {
+    baseSpacing: 16,
+    brand: "#7c6cff",
+  },
+
+  tokens: {
+    spacing: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.baseSpacing) * scale}px`;
+    },
+
+    primary: (dna) => dna.brand,
+  },
+};
+```
+
+## Prefer `satisfies`
+
+Using `satisfies` checks the shape while preserving narrower property information in the local object:
+
+```ts
+const config = {
+  primitives: {
+    baseSpacing: 16,
+    brand: "#7c6cff",
+  },
+
+  tokens: {
+    spacing: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.baseSpacing) * scale}px`;
+    },
+  },
+} satisfies GenomeConfig;
+```
+
+## Extract configuration parts
+
+```ts
+const primitives = config.primitives;
+
+const tokens = config.tokens;
+```
+
+The configuration object is copied by the Genome constructor.
+
+Changing the original primitive record later does not mutate the existing Genome instance.
+
+## Public `Genome` class shape
+
+The main public surface is conceptually:
+
+```ts
+class Genome {
+  constructor(
+    config: GenomeConfig,
+
+    target?: HTMLElement | null,
+  );
+
+  mutate(patch: RuntimeContext): void;
+
+  getTrait(name: string): Primitive;
+
+  subscribe(listener: () => void): () => void;
+
+  scope(
+    target: HTMLElement,
+
+    overrides?: RuntimeContext,
+  ): Genome;
+}
+```
+
+Private state such as the compiled graph, resolved DNA object, context object, and subscriber set is not exposed as a public TypeScript API.
+
+## Error class types
+
+```ts
+class CircularDependencyError extends Error {
+  readonly cycle: string[];
+}
+```
+
+```ts
+class UnresolvedTokenError extends Error {
+  readonly token: string;
+
+  readonly missing: string[];
+}
+```
+
+Use `instanceof` narrowing:
+
+```ts
+try {
+  const genome = new Genome(config);
+} catch (error) {
+  if (error instanceof CircularDependencyError) {
+    console.log(error.cycle);
+  }
+}
+```
+
+## React return type
+
+```ts
+function useGenomeTrait(genome: Genome, name: string): Primitive;
+```
+
+The result remains:
+
+```ts
+string | number;
+```
+
+Narrow where required:
+
+```tsx
+const color = useGenomeTrait(genome, "color");
+
+return (
+  <div
+    style={{
+      color: String(color),
+    }}
+  />
+);
+```
+
+## Vue return type
+
+```ts
+function useGenomeTrait(genome: Genome, name: string): Ref<Primitive>;
+```
+
+In script:
+
+```ts
+trait.value;
+```
+
+In templates, Vue may unwrap the ref automatically.
+
+## Svelte return type
+
+The Svelte function currently returns an inferred getter object:
+
+```ts
+{
+  get value():
+    Primitive;
+}
+```
+
+Conceptually:
+
+```ts
+{
+  readonly value:
+    Primitive;
+}
+```
+
+Read:
+
+```ts
+trait.value;
+```
+
+## Typed trait-name wrappers
+
+GenomeJS currently accepts any `string` as a trait name.
+
+Applications may add a local key union:
+
+```ts
+type ThemeTrait = "background" | "foreground" | "spacing" | "radius";
+```
+
+Create a typed reader:
+
+```ts
+function getThemeTrait(name: ThemeTrait): Primitive {
+  return themeGenome.getTrait(name);
+}
+```
+
+And a React wrapper:
+
+```tsx
+function useThemeTrait(name: ThemeTrait): Primitive {
+  return useGenomeTrait(themeGenome, name);
+}
+```
+
+This catches misspellings within the application’s known theme surface.
+
+## Typed value maps
+
+When stronger per-key return types are needed, create an application map:
+
+```ts
+interface ThemeTraitMap {
+  background: string;
+
+  foreground: string;
+
+  spacing: string;
+
+  columns: number;
+}
+```
+
+Typed helper:
+
+```ts
+function getTypedTrait<Key extends keyof ThemeTraitMap>(
+  name: Key,
+): ThemeTraitMap[Key] {
+  return themeGenome.getTrait(name) as ThemeTraitMap[Key];
+}
+```
+
+This cast is only safe when the map is maintained alongside the configuration.
+
+GenomeJS does not currently generate this mapping automatically.
+
+## Runtime validation remains necessary
+
+TypeScript types disappear at runtime.
+
+Validate:
+
+- User-provided context
+- JSON configuration
+- Colors
+- Numeric ranges
+- DOM targets
+- Stored preferences
+
+Example:
+
+```ts
+function isThemeMode(value: unknown): value is "system" | "light" | "dark" {
+  return value === "system" || value === "light" || value === "dark";
+}
+```
+
+## Current type limitations
+
+- Trait names are not inferred from a Genome configuration.
+- Trait return types are not inferred per key.
+- Runtime context is an open `unknown` record.
+- DNA keys are a generic string record.
+- Static token definitions are permitted by the type but not resolved by the current compiler.
+- Browser targets use DOM types.
+- The compiled graph is private.
+- There is no public context getter.
+- There is no public DNA snapshot getter.
+- There is no public `destroy()` method.
+
+## Related pages
+
+- [API Reference](/docs/reference/api-reference)
+- [Error Reference](/docs/reference/error-reference)
+- [Genome](/docs/core/genome)
+- [Tokens](/docs/core/tokens)
+- [Context](/docs/core/context)

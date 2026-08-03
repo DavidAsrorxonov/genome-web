@@ -1,0 +1,529 @@
+---
+title: Browser Support
+description: Understand GenomeJS language targets, DOM requirements, SSR behavior, browser APIs, and framework requirements.
+---
+
+GenomeJS does not currently publish a formal browser-version support matrix.
+
+Support should therefore be evaluated by required JavaScript and browser capabilities rather than by an undocumented list of browser versions.
+
+## Build target
+
+The package TypeScript configuration targets:
+
+```text
+ES2020
+```
+
+And includes:
+
+```text
+DOM
+```
+
+types.
+
+Applications targeting environments older than their own build configuration may need additional transpilation or polyfills.
+
+## Package formats
+
+`@genomejs/core` publishes:
+
+```text
+ES module
+CommonJS
+TypeScript declarations
+Source maps
+```
+
+The package export map provides separate `import` and `require` entries.
+
+The React and Vue packages also publish ESM and CommonJS builds.
+
+The Svelte adapter publishes a Svelte-specific entry containing rune-aware output intended for downstream Svelte compilation.
+
+## Core language requirements
+
+The Core compiler uses modern JavaScript features including:
+
+```text
+Proxy
+Map
+Set
+Object.entries()
+Object.keys()
+Object spread
+Classes
+Template literals
+```
+
+Dependency discovery relies on:
+
+```ts
+Proxy;
+```
+
+An environment without JavaScript `Proxy` support cannot run the compiler’s dependency-tracking implementation.
+
+`Proxy` generally cannot be fully reproduced with a simple polyfill.
+
+## Core without a DOM
+
+A Genome may be constructed in a non-browser environment without a target:
+
+```ts
+const genome = new Genome({
+  primitives: {
+    spacing: 16,
+  },
+
+  tokens: {
+    doubled: (dna) => Number(dna.spacing) * 2,
+  },
+});
+```
+
+When `document` is unavailable, the default target is:
+
+```ts
+null;
+```
+
+Resolution still works:
+
+```ts
+genome.getTrait("doubled");
+// 32
+```
+
+CSS custom properties are not expressed when the target is `null`.
+
+## Explicit null target
+
+```ts
+const genome = new Genome(config, null);
+```
+
+Use this when value resolution is needed but DOM output is not.
+
+## CSS expression requirements
+
+To express CSS properties, GenomeJS requires an object behaving as an `HTMLElement` with:
+
+```ts
+target.style.setProperty(name, value);
+```
+
+Generated properties use:
+
+```text
+--g-
+```
+
+Example:
+
+```css
+--g-background: #ffffff;
+```
+
+The browser must support CSS custom properties for components to consume these values through:
+
+```css
+var(--g-background)
+```
+
+## Server-side rendering
+
+The Core package supports DOM-free construction because it avoids referencing `document` when no browser global exists.
+
+Safe server operations include:
+
+```text
+Constructing a Genome with a null/default server target
+Resolving primitives and tokens
+Calling mutate()
+Calling getTrait()
+Calling subscribe()
+Using contrastRatio()
+Using lockContrast()
+Using fluidScale()
+```
+
+No CSS output occurs without a target.
+
+## Browser-only Core APIs
+
+These APIs require a browser environment:
+
+```text
+bindMediaQueries()
+bindContainerSize()
+scope()
+```
+
+`scope()` requires a real:
+
+```ts
+HTMLElement;
+```
+
+The browser bindings rely on browser globals.
+
+## `bindMediaQueries()` requirements
+
+The environment must provide:
+
+```ts
+window;
+window.matchMedia;
+MediaQueryList.matches;
+MediaQueryList.addEventListener;
+MediaQueryList.removeEventListener;
+```
+
+Media queries used:
+
+```css
+(prefers-color-scheme: dark)
+```
+
+```css
+(prefers-reduced-motion)
+```
+
+Call the utility only after browser mounting.
+
+## `bindContainerSize()` requirements
+
+The environment must provide:
+
+```ts
+ResizeObserver;
+HTMLElement;
+ResizeObserverEntry;
+```
+
+The utility reads:
+
+```ts
+entry.contentRect.width;
+```
+
+A test environment such as jsdom may require a `ResizeObserver` mock because jsdom does not necessarily implement layout observation.
+
+## React requirements
+
+`@genomejs/react` declares:
+
+```text
+React >= 18
+```
+
+The package uses:
+
+```ts
+useSyncExternalStore();
+```
+
+And is marked:
+
+```ts
+"use client";
+```
+
+A component calling `useGenomeTrait()` should therefore be treated as a Client Component in a React Server Components framework such as Next.js.
+
+The hook also supplies a server snapshot function, allowing React DOM server rendering to read the current trait without browser DOM access.
+
+## React SSR example
+
+```tsx
+function Message({ genome }: { genome: Genome }) {
+  const message = useGenomeTrait(genome, "message");
+
+  return <p>{message}</p>;
+}
+```
+
+For stable hydration, the Genome’s initial values should match between the server output and the browser’s first render.
+
+Apply browser-dependent mutations after mounting.
+
+## Vue requirements
+
+`@genomejs/vue` declares:
+
+```text
+Vue >= 3
+```
+
+The adapter reads the initial trait immediately and creates its subscription inside:
+
+```ts
+onMounted();
+```
+
+Cleanup runs inside:
+
+```ts
+onUnmounted();
+```
+
+Browser-side reactive updates therefore begin after mounting.
+
+A DOM-free Genome can provide the initial resolved value during SSR, but browser environment bindings must still wait until mount.
+
+## Svelte requirements
+
+`@genomejs/svelte` declares:
+
+```text
+Svelte >= 5
+```
+
+The adapter uses:
+
+```text
+$state
+$effect
+```
+
+It publishes rune-aware Svelte output rather than a conventional ESM or CommonJS JavaScript build.
+
+The consuming application must process the package using a Svelte-aware compiler setup.
+
+Typical compatible environments include:
+
+```text
+SvelteKit
+Vite with the Svelte plugin
+Other bundlers configured for Svelte 5 package source
+```
+
+A framework-neutral JavaScript consumer should use:
+
+```text
+@genomejs/core
+```
+
+instead.
+
+## Next.js usage
+
+Safe pattern:
+
+```tsx
+"use client";
+
+import { useEffect } from "react";
+
+import { bindMediaQueries } from "@genomejs/core";
+
+export function EnvironmentBinding() {
+  useEffect(() => {
+    return bindMediaQueries(genome);
+  }, []);
+
+  return null;
+}
+```
+
+Avoid:
+
+```ts
+bindMediaQueries(genome);
+```
+
+at module scope in code that may run on the server.
+
+## Vue usage
+
+```vue
+<script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
+
+let cleanup: (() => void) | undefined;
+
+onMounted(() => {
+  cleanup = bindMediaQueries(genome);
+});
+
+onUnmounted(() => {
+  cleanup?.();
+});
+</script>
+```
+
+## Svelte usage
+
+```svelte
+<script lang="ts">
+  import {
+    onMount,
+  } from "svelte";
+
+  onMount(() => {
+    return bindMediaQueries(
+      genome,
+    );
+  });
+</script>
+```
+
+## Web workers
+
+A worker environment has no normal document or `HTMLElement`.
+
+Possible worker usage:
+
+```text
+Core resolution with a null target
+mutate()
+getTrait()
+subscribe()
+contrastRatio()
+lockContrast()
+fluidScale()
+```
+
+Unavailable without custom integration:
+
+```text
+CSS expression onto an HTMLElement
+scope()
+bindMediaQueries()
+bindContainerSize()
+```
+
+GenomeJS does not currently advertise a dedicated worker integration.
+
+## Node.js
+
+Possible Node usage:
+
+```ts
+const genome = new Genome(config);
+
+genome.mutate({
+  scale: 1.25,
+});
+
+const value = genome.getTrait("spacing");
+```
+
+Pure utilities also work without DOM APIs:
+
+```ts
+contrastRatio("#000000", "#ffffff");
+
+fluidScale(16, 32);
+```
+
+Browser bindings do not work in plain Node without browser-compatible globals.
+
+## Test environments
+
+### jsdom
+
+Useful for:
+
+- `HTMLElement`
+- `style.setProperty`
+- CSS expression tests
+- React or Vue DOM tests
+
+May require mocks for:
+
+```text
+matchMedia
+ResizeObserver
+```
+
+### Node test environment
+
+Useful for:
+
+- SSR behavior
+- Pure utility tests
+- Null-target Genome resolution
+
+Do not call browser bindings in a Node-only environment.
+
+## Required-capability summary
+
+| Feature                    | Required capabilities                                     |
+| -------------------------- | --------------------------------------------------------- |
+| Core dependency resolution | ES2020-compatible JavaScript, `Proxy`, `Map`, `Set`       |
+| Null-target Core           | No DOM required                                           |
+| CSS expression             | `HTMLElement`, `style.setProperty`, CSS custom properties |
+| `scope()`                  | Real `HTMLElement`                                        |
+| `bindMediaQueries()`       | `window.matchMedia`, modern `MediaQueryList` events       |
+| `bindContainerSize()`      | `ResizeObserver`, `HTMLElement`                           |
+| React adapter              | React 18 or newer                                         |
+| Vue adapter                | Vue 3 or newer                                            |
+| Svelte adapter             | Svelte 5 and Svelte-aware compilation                     |
+
+## Polyfills and transpilation
+
+An application may transpile package syntax further for its own browser targets.
+
+However:
+
+- Transpilation does not provide missing DOM APIs.
+- `ResizeObserver` may require a polyfill in an older environment.
+- `matchMedia` may require a mock in tests.
+- `Proxy` is fundamental to dependency discovery and is not ordinarily replaceable with a complete polyfill.
+- CSS custom properties must be supported by the rendering environment.
+
+## React Native and non-DOM renderers
+
+GenomeJS is primarily designed around web design tokens and CSS custom-property expression.
+
+The Core can resolve values with a null target, but automatic DOM CSS output is unavailable in non-DOM renderers.
+
+The current packages do not publish an official React Native-specific adapter or support contract.
+
+A non-DOM application may still read values through:
+
+```ts
+getTrait();
+```
+
+or subscriptions, but that should be treated as a custom integration rather than documented first-class support.
+
+## Formal support status
+
+Until the project publishes and continuously tests a browser matrix, documentation should avoid claims such as:
+
+```text
+Supports every modern browser
+Supports Safari version X
+Supports Internet Explorer
+Supports all Node versions
+```
+
+The accurate support statement is capability-based:
+
+> GenomeJS Core targets ES2020. DOM expression requires CSS custom properties and an HTMLElement target. Environment bindings additionally require `matchMedia` or `ResizeObserver`. Framework adapters require their declared framework peer versions.
+
+## Troubleshooting checklist
+
+When GenomeJS works during SSR but not after mounting, check:
+
+- Was a browser target created?
+- Did the environment binding run after mount?
+- Is `ResizeObserver` available?
+- Is `matchMedia` available?
+- Are the same Genome instances being used?
+- Does the browser support CSS custom properties?
+- Is the Svelte package being compiled by Svelte?
+- Are duplicate framework installations present?
+- Does the test environment need browser API mocks?
+
+## Related pages
+
+- [Installation](/docs/installation)
+- [React](/docs/frameworks/react)
+- [Vue](/docs/frameworks/vue)
+- [Svelte](/docs/frameworks/svelte)
+- [Error Reference](/docs/reference/error-reference)

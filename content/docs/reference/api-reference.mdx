@@ -1,0 +1,578 @@
+---
+title: API Reference
+description: A complete index of the public GenomeJS Core and framework adapter APIs.
+---
+
+This page lists the public APIs exported by the GenomeJS packages.
+
+Use the linked pages for detailed examples, lifecycle behavior, errors, and implementation notes.
+
+## Packages
+
+| Package            | Purpose                                                           |
+| ------------------ | ----------------------------------------------------------------- |
+| `@genomejs/core`   | Framework-neutral compiler, runtime, utilities, errors, and types |
+| `@genomejs/react`  | React trait subscription hook                                     |
+| `@genomejs/vue`    | Vue trait subscription composable                                 |
+| `@genomejs/svelte` | Svelte 5 rune-aware trait wrapper                                 |
+
+## Core imports
+
+```ts
+import {
+  Genome,
+  CircularDependencyError,
+  UnresolvedTokenError,
+  contrastRatio,
+  lockContrast,
+  fluidScale,
+  bindMediaQueries,
+  bindContainerSize,
+} from "@genomejs/core";
+
+import type {
+  Primitive,
+  RuntimeContext,
+  DNAReader,
+  TokenFn,
+  TokenDefinition,
+  GenomeConfig,
+  Mutator,
+} from "@genomejs/core";
+```
+
+## `Genome`
+
+The central compiler and runtime class.
+
+```ts
+new Genome(
+  config: GenomeConfig,
+  target?: HTMLElement | null,
+): Genome
+```
+
+A browser instance defaults to:
+
+```ts
+document.documentElement;
+```
+
+When `document` is unavailable, the default target is:
+
+```ts
+null;
+```
+
+```ts
+const genome = new Genome({
+  primitives: {
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    spacing: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.baseSpacing) * scale}px`;
+    },
+  },
+});
+```
+
+Detailed reference:
+
+- [`Genome`](/docs/core/genome)
+- [Core Concepts](/docs/core-concepts)
+
+## `Genome` methods
+
+### `mutate()`
+
+```ts
+genome.mutate(
+  patch: RuntimeContext,
+): void
+```
+
+Shallowly merges a runtime-context patch, resolves derived tokens, expresses changed CSS custom properties, and notifies subscribers.
+
+```ts
+genome.mutate({
+  mode: "dark",
+  scale: 1.25,
+});
+```
+
+Detailed reference:
+
+- [`mutate()`](/docs/core/mutate)
+- [Context](/docs/core/context)
+
+### `getTrait()`
+
+```ts
+genome.getTrait(
+  name: string,
+): Primitive
+```
+
+Returns the current resolved value of a primitive or derived token.
+
+```ts
+const spacing = genome.getTrait("spacing");
+```
+
+An unknown name throws a standard `Error`.
+
+Detailed reference:
+
+- [`getTrait()`](/docs/core/get-trait)
+
+### `subscribe()`
+
+```ts
+genome.subscribe(
+  listener: () => void,
+): () => void
+```
+
+Registers a listener and returns an unsubscribe function.
+
+```ts
+const unsubscribe = genome.subscribe(() => {
+  console.log(genome.getTrait("spacing"));
+});
+
+unsubscribe();
+```
+
+Detailed reference:
+
+- [`subscribe()`](/docs/core/subscribe)
+
+### `scope()`
+
+```ts
+genome.scope(
+  target: HTMLElement,
+  overrides?: RuntimeContext,
+): Genome
+```
+
+Creates an independent child Genome using the same token configuration, another target, and optional initial context overrides.
+
+```ts
+const child = genome.scope(element, {
+  density: "compact",
+});
+```
+
+Detailed reference:
+
+- [`scope()`](/docs/core/scope)
+- [Scoped Component Themes](/docs/guides/scoped-component-themes)
+
+## Contrast utilities
+
+### `contrastRatio()`
+
+```ts
+contrastRatio(
+  hexA: string,
+  hexB: string,
+): number
+```
+
+Calculates relative-luminance contrast between two hexadecimal RGB colors.
+
+```ts
+const ratio = contrastRatio("#000000", "#ffffff");
+```
+
+Detailed reference:
+
+- [`contrastRatio()`](/docs/utilities/contrast-ratio)
+
+### `lockContrast()`
+
+```ts
+lockContrast(
+  foreground: string,
+  background: string,
+  minRatio?: number,
+): string
+```
+
+Returns the original foreground when it already satisfies the requested ratio. Otherwise, it adjusts the foreground toward black or white.
+
+Default ratio:
+
+```ts
+4.5;
+```
+
+```ts
+const foreground = lockContrast("#777777", "#888888", 4.5);
+```
+
+Detailed reference:
+
+- [`lockContrast()`](/docs/utilities/lock-contrast)
+- [Accessible Colors](/docs/guides/accessible-colors)
+
+## Typography utility
+
+### `fluidScale()`
+
+```ts
+fluidScale(
+  minPx: number,
+  maxPx: number,
+  minVw?: number,
+  maxVw?: number,
+): string
+```
+
+Defaults:
+
+```ts
+minVw = 320;
+maxVw = 1440;
+```
+
+Returns a CSS `clamp()` expression.
+
+```ts
+const headingSize = fluidScale(36, 72);
+```
+
+Detailed reference:
+
+- [`fluidScale()`](/docs/utilities/fluid-scale)
+- [Responsive Tokens](/docs/guides/responsive-tokens)
+
+## Browser environment bindings
+
+### `bindMediaQueries()`
+
+```ts
+bindMediaQueries(
+  genome: Genome,
+): () => void
+```
+
+Synchronizes these context properties:
+
+```ts
+{
+  colorScheme: "light" | "dark";
+
+  reducedMotion: boolean;
+}
+```
+
+```ts
+const cleanup = bindMediaQueries(genome);
+```
+
+The returned function removes both media-query listeners.
+
+Detailed reference:
+
+- [`bindMediaQueries()`](/docs/utilities/bind-media-queries)
+- [Dark Mode](/docs/guides/dark-mode)
+
+### `bindContainerSize()`
+
+```ts
+bindContainerSize(
+  genome: Genome,
+  element: HTMLElement,
+): () => void
+```
+
+Synchronizes:
+
+```ts
+{
+  containerWidth: entry.contentRect.width;
+}
+```
+
+```ts
+const cleanup = bindContainerSize(genome, element);
+```
+
+The returned function disconnects the `ResizeObserver`.
+
+Detailed reference:
+
+- [`bindContainerSize()`](/docs/utilities/bind-container-size)
+- [Container-Aware Components](/docs/guides/container-aware-components)
+
+## Error classes
+
+### `CircularDependencyError`
+
+```ts
+new CircularDependencyError(
+  cycle: string[],
+)
+```
+
+Public property:
+
+```ts
+error.cycle;
+```
+
+Example message:
+
+```text
+Circular token dependency: first -> second -> first
+```
+
+Detailed reference:
+
+- [Error Reference](/docs/reference/error-reference#circulardependencyerror)
+
+### `UnresolvedTokenError`
+
+```ts
+new UnresolvedTokenError(
+  token: string,
+  missing: string[],
+)
+```
+
+Public properties:
+
+```ts
+error.token;
+error.missing;
+```
+
+Example message:
+
+```text
+Token "surface" references undefined token(s): missingSurface
+```
+
+Detailed reference:
+
+- [Error Reference](/docs/reference/error-reference#unresolvedtokenerror)
+
+## Core TypeScript types
+
+### `Primitive`
+
+```ts
+type Primitive = string | number;
+```
+
+### `RuntimeContext`
+
+```ts
+interface RuntimeContext {
+  [key: string]: unknown;
+}
+```
+
+### `DNAReader`
+
+```ts
+type DNAReader = Record<string, Primitive>;
+```
+
+### `TokenFn`
+
+```ts
+type TokenFn = (dna: DNAReader, context: RuntimeContext) => Primitive;
+```
+
+### `TokenDefinition`
+
+```ts
+type TokenDefinition = Primitive | TokenFn;
+```
+
+### `GenomeConfig`
+
+```ts
+interface GenomeConfig {
+  primitives: Record<string, Primitive>;
+
+  tokens: Record<string, TokenDefinition>;
+}
+```
+
+### `Mutator`
+
+```ts
+type Mutator = RuntimeContext;
+```
+
+Detailed reference:
+
+- [TypeScript Types](/docs/reference/typescript-types)
+
+## React adapter
+
+Install:
+
+```bash
+npm install @genomejs/core @genomejs/react
+```
+
+Import:
+
+```ts
+import { useGenomeTrait } from "@genomejs/react";
+```
+
+Signature:
+
+```ts
+useGenomeTrait(
+  genome: Genome,
+  name: string,
+): Primitive
+```
+
+```tsx
+const color = useGenomeTrait(genome, "color");
+```
+
+The adapter uses React’s external-store API to subscribe and read browser and server snapshots.
+
+Detailed reference:
+
+- [React](/docs/frameworks/react)
+
+## Vue adapter
+
+Install:
+
+```bash
+npm install @genomejs/core @genomejs/vue
+```
+
+Import:
+
+```ts
+import { useGenomeTrait } from "@genomejs/vue";
+```
+
+Signature:
+
+```ts
+useGenomeTrait(
+  genome: Genome,
+  name: string,
+): Ref<Primitive>
+```
+
+```ts
+const color = useGenomeTrait(genome, "color");
+```
+
+The composable subscribes after mounting and cleans up when the component unmounts.
+
+Detailed reference:
+
+- [Vue](/docs/frameworks/vue)
+
+## Svelte adapter
+
+Install:
+
+```bash
+npm install @genomejs/core @genomejs/svelte
+```
+
+Import:
+
+```ts
+import { genomeTrait } from "@genomejs/svelte";
+```
+
+Conceptual signature:
+
+```ts
+genomeTrait(
+  genome: Genome,
+  name: string,
+): {
+  readonly value: Primitive;
+}
+```
+
+```ts
+const color = genomeTrait(genome, "color");
+```
+
+Read:
+
+```svelte
+{color.value}
+```
+
+The adapter uses Svelte 5 runes and requires a Svelte-aware downstream compiler.
+
+Detailed reference:
+
+- [Svelte](/docs/frameworks/svelte)
+
+## Package export summary
+
+### `@genomejs/core`
+
+Runtime exports:
+
+```text
+Genome
+CircularDependencyError
+UnresolvedTokenError
+contrastRatio
+lockContrast
+fluidScale
+bindMediaQueries
+bindContainerSize
+```
+
+Type exports:
+
+```text
+Primitive
+RuntimeContext
+DNAReader
+TokenFn
+TokenDefinition
+GenomeConfig
+Mutator
+```
+
+### `@genomejs/react`
+
+```text
+useGenomeTrait
+```
+
+### `@genomejs/vue`
+
+```text
+useGenomeTrait
+```
+
+### `@genomejs/svelte`
+
+```text
+genomeTrait
+```
+
+## Related reference pages
+
+- [Error Reference](/docs/reference/error-reference)
+- [TypeScript Types](/docs/reference/typescript-types)
+- [Browser Support](/docs/reference/browser-support)
