@@ -67,8 +67,7 @@ const footerGroups: FooterGroup[] = [
       },
       {
         label: "Contributing",
-        href: "https://github.com/DavidAsrorxonov/genome#contributing",
-        external: true,
+        href: "/docs/project/contributing",
       },
     ],
   },
