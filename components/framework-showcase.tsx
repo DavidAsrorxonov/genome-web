@@ -1,23 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentType } from "react";
-import Link from "next/link";
-import { useGenomeTrait } from "@genomejs/react";
 import {
-  ArrowRight,
-  Box,
-  Check,
-  Clipboard,
-  Code2,
-  Component,
-  Layers3,
-  Sparkles,
-  Link2,
-} from "lucide-react";
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type SVGProps,
+} from "react";
+import { useGenomeTrait } from "@genomejs/react";
+import { ArrowRight, Check, Clipboard, Code2 } from "lucide-react";
 
+import { Core as CoreIcon } from "@/components/icons/core";
+import { React as ReactIcon } from "@/components/icons/react";
+import { Svelte as SvelteIcon } from "@/components/icons/svelte";
+import { Vue as VueIcon } from "@/components/icons/vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   createFrameworkDemoGenome,
   initialFrameworkDemoContext,
@@ -35,10 +33,7 @@ type Framework = {
   installation: string;
   code: string;
   docsUrl: string;
-  icon: ComponentType<{
-    className?: string;
-    "aria-hidden"?: boolean;
-  }>;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
   note?: string;
 };
 
@@ -51,7 +46,7 @@ const frameworks: Framework[] = [
     installation: "npm install @genomejs/core",
     docsUrl:
       "https://github.com/DavidAsrorxonov/genome/tree/main/packages/core#readme",
-    icon: Box,
+    icon: CoreIcon,
     code: `import { Genome } from "@genomejs/core";
 
 const genome = new Genome({
@@ -77,7 +72,7 @@ const color =
     installation: "npm install @genomejs/core @genomejs/react",
     docsUrl:
       "https://github.com/DavidAsrorxonov/genome/tree/main/packages/react#readme",
-    icon: Component,
+    icon: ReactIcon,
     code: `"use client";
 
 import { useGenomeTrait }
@@ -104,7 +99,7 @@ function Heading() {
     installation: "npm install @genomejs/core @genomejs/vue",
     docsUrl:
       "https://github.com/DavidAsrorxonov/genome/tree/main/packages/vue#readme",
-    icon: Layers3,
+    icon: VueIcon,
     code: `<script setup lang="ts">
 import { useGenomeTrait }
   from "@genomejs/vue";
@@ -129,7 +124,7 @@ const color = useGenomeTrait(
     installation: "npm install @genomejs/core @genomejs/svelte",
     docsUrl:
       "https://github.com/DavidAsrorxonov/genome/tree/main/packages/svelte#readme",
-    icon: Sparkles,
+    icon: SvelteIcon,
     note: "The Svelte adapter ships rune-aware source and requires a Svelte-aware downstream bundler.",
     code: `<script lang="ts">
   import { genomeTrait }
@@ -146,10 +141,6 @@ const color = useGenomeTrait(
 </h1>`,
   },
 ];
-
-function isFrameworkId(value: string): value is FrameworkId {
-  return frameworks.some((framework) => framework.id === value);
-}
 
 function FrameworkCode({ code }: { code: string }) {
   const lines = code.split("\n");
@@ -266,8 +257,8 @@ function LiveFrameworkPreview({ framework }: { framework: Framework }) {
         style={{
           gap: "var(--g-demo-gap, 16px)",
           borderRadius: "var(--g-demo-radius, 18px)",
-          backgroundColor: "var(--g-demo-surface, #121620)",
-          color: "var(--g-demo-foreground, #f7f8fb)",
+          backgroundColor: "var(--g-demo-surface, #0b0c06)",
+          color: "var(--g-demo-foreground, #f2f3e8)",
           borderColor:
             "color-mix(in srgb, var(--g-demo-accent, #bde900) 32%, transparent)",
         }}
@@ -278,7 +269,7 @@ function LiveFrameworkPreview({ framework }: { framework: Framework }) {
           <p
             className="mt-1 text-xs leading-5"
             style={{
-              color: "var(--g-demo-muted-foreground, #a5adbd)",
+              color: "var(--g-demo-muted-foreground, #7b7b71)",
             }}
           >
             The adapter exposes the same resolved Core state using its
@@ -330,6 +321,37 @@ function LiveFrameworkPreview({ framework }: { framework: Framework }) {
   );
 }
 
+function FrameworkTabButton({
+  framework,
+  selected,
+  onSelect,
+}: {
+  framework: Framework;
+  selected: boolean;
+  onSelect: (framework: FrameworkId) => void;
+}) {
+  const Icon = framework.icon;
+
+  return (
+    <button
+      type="button"
+      role="tab"
+      id={`framework-tab-${framework.id}`}
+      aria-selected={selected}
+      aria-controls="framework-panel"
+      onClick={() => onSelect(framework.id)}
+      className={cn(
+        "flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-[background-color,color,box-shadow] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-12 sm:text-base",
+        selected && "bg-background text-foreground shadow-sm",
+      )}
+    >
+      <Icon className="size-4 shrink-0" aria-hidden="true" />
+
+      <span className="truncate">{framework.name}</span>
+    </button>
+  );
+}
+
 export function FrameworkShowcase() {
   const [activeFramework, setActiveFramework] = useState<FrameworkId>("core");
 
@@ -352,18 +374,6 @@ export function FrameworkShowcase() {
       );
     }, 1600);
   }
-
-  function handleValueChange(value: string) {
-    if (isFrameworkId(value)) {
-      setActiveFramework(value);
-    }
-  }
-
-  if (!currentFramework) {
-    return null;
-  }
-
-  const CurrentIcon = currentFramework.icon;
 
   return (
     <section
@@ -390,42 +400,38 @@ export function FrameworkShowcase() {
           </p>
         </div>
 
-        <Tabs
-          value={activeFramework}
-          onValueChange={handleValueChange}
-          className="mt-14"
+        <div
+          role="tablist"
+          aria-label="Framework adapters"
+          className="mx-auto mt-14 grid w-full max-w-3xl grid-cols-2 gap-1.5 rounded-2xl border bg-muted/70 p-1.5 sm:grid-cols-4"
         >
-          <TabsList className="mx-auto grid h-auto w-full max-w-2xl grid-cols-2 gap-1 sm:grid-cols-4">
-            {frameworks.map((framework) => {
-              const Icon = framework.icon;
-
-              return (
-                <TabsTrigger
-                  key={framework.id}
-                  value={framework.id}
-                  className="min-h-11 gap-2"
-                >
-                  <Link2 className="size-4" aria-hidden="true" />
-
-                  {framework.name}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-
           {frameworks.map((framework) => (
-            <TabsContent
+            <FrameworkTabButton
               key={framework.id}
-              value={framework.id}
-              className="mt-6"
-            >
+              framework={framework}
+              selected={framework.id === activeFramework}
+              onSelect={setActiveFramework}
+            />
+          ))}
+        </div>
+
+        <div
+          role="tabpanel"
+          id="framework-panel"
+          aria-labelledby={`framework-tab-${currentFramework.id}`}
+          className="mt-6"
+        >
+          {(() => {
+            const Icon = currentFramework.icon;
+
+            return (
               <div className="grid gap-5 lg:grid-cols-[1.08fr_0.92fr] lg:gap-6">
                 <div className="overflow-hidden rounded-2xl border bg-background shadow-sm">
                   <header className="border-b p-5 sm:p-6">
                     <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex items-start gap-4">
                         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border bg-card text-primary">
-                          <Link2 className="size-5" aria-hidden="true" />
+                          <Icon className="size-5" aria-hidden="true" />
                         </span>
 
                         <div>
@@ -526,9 +532,9 @@ export function FrameworkShowcase() {
                   </div>
                 </div>
               </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+            );
+          })()}
+        </div>
 
         <div className="mx-auto mt-8 max-w-3xl text-center text-sm leading-6 text-muted-foreground">
           The live preview runs through the React adapter because this website
