@@ -56,7 +56,7 @@ const frameworks: Framework[] = [
 
 const genome = new Genome({
   primitives: {
-    color: "#7c6cff",
+    color: "#bde900",
   },
 
   tokens: {
@@ -253,8 +253,8 @@ function LiveFrameworkPreview({ framework }: { framework: Framework }) {
         <span
           className="rounded-full border px-2.5 py-1 font-mono text-[10px]"
           style={{
-            borderColor: "var(--g-demo-accent, #7c6cff)",
-            color: "var(--g-demo-accent, #7c6cff)",
+            borderColor: "var(--g-demo-accent, #bde900)",
+            color: "var(--g-demo-accent, #bde900)",
           }}
         >
           connected
@@ -269,7 +269,7 @@ function LiveFrameworkPreview({ framework }: { framework: Framework }) {
           backgroundColor: "var(--g-demo-surface, #121620)",
           color: "var(--g-demo-foreground, #f7f8fb)",
           borderColor:
-            "color-mix(in srgb, var(--g-demo-accent, #7c6cff) 32%, transparent)",
+            "color-mix(in srgb, var(--g-demo-accent, #bde900) 32%, transparent)",
         }}
       >
         <div>
@@ -292,7 +292,7 @@ function LiveFrameworkPreview({ framework }: { framework: Framework }) {
           style={{
             minHeight: "var(--g-demo-control-height, 42px)",
             borderRadius: "var(--g-demo-radius, 18px)",
-            backgroundColor: "var(--g-demo-accent, #7c6cff)",
+            backgroundColor: "var(--g-demo-accent, #bde900)",
             color: "#ffffff",
           }}
           onClick={mutatePreview}

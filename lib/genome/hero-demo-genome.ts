@@ -47,15 +47,15 @@ function readScale(context: RuntimeContext): number {
 
 export const heroDemoGenomeConfig = {
   primitives: {
-    base: "#7c6cff",
+    base: "#bde900",
 
-    darkSurface: "#121620",
-    darkForeground: "#f7f8fb",
-    darkMutedForeground: "#a5adbd",
+    darkSurface: "#0b0c06",
+    darkForeground: "#f2f3e8",
+    darkMutedForeground: "#7b7b71",
 
     lightSurface: "#ffffff",
-    lightForeground: "#171923",
-    lightMutedForeground: "#667085",
+    lightForeground: "#101008",
+    lightMutedForeground: "#63645a",
 
     spacing: 16,
     radius: 12,

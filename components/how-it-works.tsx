@@ -44,7 +44,7 @@ const stages: Stage[] = [
       "const genome = new Genome({",
       "  primitives: {",
       "    spacing: 16,",
-      '    base: "#7c6cff",',
+      '    base: "#bde900",',
       "  },",
       "  tokens: {",
       "    gap: (dna, context) =>",
@@ -108,7 +108,7 @@ const stages: Stage[] = [
     code: [
       ":root {",
       "  --g-spacing: 16;",
-      "  --g-base: #7c6cff;",
+      "  --g-base: #bde900;",
       "  --g-gap: 19.2;",
       "}",
       "",
