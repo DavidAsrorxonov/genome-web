@@ -1,0 +1,6 @@
+{
+  "title": "Frameworks",
+  "description": "Use GenomeJS with React, Vue, and Svelte.",
+  "defaultOpen": true,
+  "pages": ["react", "vue", "svelte"]
+}

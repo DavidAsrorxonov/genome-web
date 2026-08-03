@@ -1,0 +1,424 @@
+---
+title: Svelte
+description: Subscribe Svelte 5 components to GenomeJS traits through a rune-aware reactive wrapper.
+---
+
+The Svelte adapter exposes a resolved GenomeJS trait through a rune-backed object.
+
+```ts
+const color = genomeTrait(genome, "color");
+```
+
+Read the current value through:
+
+```ts
+color.value;
+```
+
+## Installation
+
+```bash
+npm install @genomejs/core @genomejs/svelte
+```
+
+The adapter requires:
+
+- Svelte 5 or newer
+- A Svelte-aware downstream bundler
+- Support for compiling rune syntax shipped by dependencies
+
+A standard SvelteKit or Vite setup with the Svelte plugin satisfies these requirements.
+
+## Export
+
+```ts
+import { genomeTrait } from "@genomejs/svelte";
+```
+
+## Function shape
+
+```ts
+genomeTrait(
+  genome: Genome,
+  name: string,
+): {
+  readonly value: Primitive;
+}
+```
+
+### Parameters
+
+| Parameter | Type     | Description                     |
+| --------- | -------- | ------------------------------- |
+| `genome`  | `Genome` | Genome instance to observe      |
+| `name`    | `string` | Primitive or derived token name |
+
+### Return value
+
+The helper returns a reactive object with a `value` getter.
+
+```ts
+trait.value;
+```
+
+The value is currently a string or number.
+
+## Create a shared Genome
+
+Create `src/lib/theme-genome.ts`:
+
+```ts
+import { Genome } from "@genomejs/core";
+
+export const themeGenome = new Genome({
+  primitives: {
+    lightSurface: "#ffffff",
+    darkSurface: "#121620",
+    lightForeground: "#171923",
+    darkForeground: "#f7f8fb",
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    surface: (dna, context) =>
+      context.mode === "dark" ? dna.darkSurface : dna.lightSurface,
+
+    foreground: (dna, context) =>
+      context.mode === "dark" ? dna.darkForeground : dna.lightForeground,
+
+    spacing: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.baseSpacing) * scale}px`;
+    },
+  },
+});
+
+themeGenome.mutate({
+  mode: "light",
+  scale: 1,
+});
+```
+
+## Use traits in a component
+
+```svelte
+<script lang="ts">
+  import {
+    genomeTrait,
+  } from "@genomejs/svelte";
+
+  import {
+    themeGenome,
+  } from "$lib/theme-genome";
+
+  const surface = genomeTrait(
+    themeGenome,
+    "surface",
+  );
+
+  const foreground = genomeTrait(
+    themeGenome,
+    "foreground",
+  );
+
+  const spacing = genomeTrait(
+    themeGenome,
+    "spacing",
+  );
+</script>
+
+<section
+  style="
+    display: grid;
+    gap: {spacing.value};
+    padding: {spacing.value};
+    background: {surface.value};
+    color: {foreground.value};
+  "
+>
+  <h2>Reactive theme</h2>
+
+  <p>
+    Current spacing:
+    {spacing.value}
+  </p>
+</section>
+```
+
+## Mutate from Svelte
+
+```svelte
+<script lang="ts">
+  import {
+    genomeTrait,
+  } from "@genomejs/svelte";
+
+  import {
+    themeGenome,
+  } from "$lib/theme-genome";
+
+  const surface = genomeTrait(
+    themeGenome,
+    "surface",
+  );
+
+  function useLightMode() {
+    themeGenome.mutate({
+      mode: "light",
+    });
+  }
+
+  function useDarkMode() {
+    themeGenome.mutate({
+      mode: "dark",
+    });
+  }
+</script>
+
+<p>
+  Current surface:
+  {surface.value}
+</p>
+
+<button
+  type="button"
+  onclick={useLightMode}
+>
+  Light
+</button>
+
+<button
+  type="button"
+  onclick={useDarkMode}
+>
+  Dark
+</button>
+```
+
+When the Genome mutates, the wrapper’s internal rune state updates and Svelte refreshes expressions that read `.value`.
+
+## Lifecycle behavior
+
+Internally, the adapter uses:
+
+```ts
+$state(...)
+```
+
+to hold the current trait and:
+
+```ts
+$effect(...)
+```
+
+to manage the Genome subscription.
+
+Conceptually:
+
+```text
+genomeTrait() runs
+       ↓
+$state gets getTrait(name)
+       ↓
+$effect subscribes
+       ↓
+genome.mutate()
+       ↓
+internal rune state changes
+       ↓
+expressions reading .value update
+       ↓
+component is destroyed
+       ↓
+effect cleanup unsubscribes
+```
+
+Subscription cleanup is automatic.
+
+## Keep the wrapper object
+
+Read the current value through the returned object:
+
+```ts
+const spacing = genomeTrait(genome, "spacing");
+
+console.log(spacing.value);
+```
+
+Avoid copying the value once and expecting the copy to remain reactive:
+
+```ts
+const initialSpacing = spacing.value;
+```
+
+`initialSpacing` is an ordinary value. Future mutations are available through `spacing.value`.
+
+## Reading multiple traits
+
+```ts
+const surface = genomeTrait(genome, "surface");
+
+const foreground = genomeTrait(genome, "foreground");
+```
+
+The current adapter creates one reactive wrapper per token name.
+
+## CSS custom properties
+
+GenomeJS also writes normal CSS variables:
+
+```svelte
+<article class="card">
+  Styled by GenomeJS
+</article>
+
+<style>
+  .card {
+    color: var(--g-foreground);
+    background:
+      var(--g-surface);
+    gap: var(--g-spacing);
+  }
+</style>
+```
+
+Use `genomeTrait()` when the Svelte template or component logic needs the JavaScript value.
+
+Use CSS properties when the value is only needed for styling.
+
+## Browser state binding
+
+```svelte
+<script lang="ts">
+  import {
+    onMount,
+  } from "svelte";
+
+  import {
+    themeGenome,
+  } from "$lib/theme-genome";
+
+  onMount(() => {
+    const query =
+      window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      );
+
+    function updateMode() {
+      themeGenome.mutate({
+        mode: query.matches
+          ? "dark"
+          : "light",
+      });
+    }
+
+    updateMode();
+
+    query.addEventListener(
+      "change",
+      updateMode,
+    );
+
+    return () => {
+      query.removeEventListener(
+        "change",
+        updateMode,
+      );
+    };
+  });
+</script>
+```
+
+## Rune-aware package source
+
+`@genomejs/svelte` ships Svelte rune-aware output rather than a normal framework-neutral JavaScript helper.
+
+Your downstream toolchain must process the package using Svelte’s compiler.
+
+Supported examples include:
+
+- SvelteKit
+- Vite with the Svelte plugin
+- Other bundlers configured to compile Svelte 5 package source
+
+A bundler that treats the package as ordinary unprocessed JavaScript may fail when it encounters rune syntax.
+
+## Unknown trait behavior
+
+The helper initially calls:
+
+```ts
+genome.getTrait(name);
+```
+
+An unknown name throws:
+
+```ts
+genomeTrait(genome, "missingTrait");
+```
+
+Current error:
+
+```text
+Unknown token: "missingTrait"
+```
+
+## Keep the Genome stable
+
+Prefer a shared Genome instance:
+
+```ts
+export const genome = new Genome(config);
+```
+
+Do not recreate the Genome from reactive logic each time state changes.
+
+The returned wrapper subscribes to the specific Genome instance supplied when `genomeTrait()` runs.
+
+## Common problems
+
+### Rune syntax compilation error
+
+Confirm that:
+
+- Svelte 5 or newer is installed.
+- The application uses a Svelte-aware bundler.
+- The Svelte package export condition is recognized.
+- Dependencies containing Svelte source are processed by the Svelte compiler.
+
+### The template does not update
+
+Read:
+
+```svelte
+{trait.value}
+```
+
+rather than storing one earlier copy of the value.
+
+Also confirm that the same Genome instance is being mutated.
+
+### The package cannot be imported outside Svelte
+
+The package is intended for a Svelte-aware consumer and exposes a Svelte package entry.
+
+Use `@genomejs/core` directly in framework-neutral environments.
+
+## Notes
+
+- The adapter targets Svelte 5.
+- It is implemented with runes.
+- The current value is read through `.value`.
+- The subscription is created inside `$effect`.
+- Effect cleanup removes the subscription.
+- A Svelte-aware downstream bundler is required.
+- Unknown trait names throw.
+
+## Related pages
+
+- [`subscribe()`](/docs/core/subscribe)
+- [`getTrait()`](/docs/core/get-trait)
+- [`mutate()`](/docs/core/mutate)
+- [React adapter](/docs/frameworks/react)
+- [Vue adapter](/docs/frameworks/vue)

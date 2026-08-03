@@ -1,0 +1,410 @@
+---
+title: React
+description: Subscribe React components to resolved GenomeJS traits with useGenomeTrait().
+---
+
+The React adapter connects a component to one resolved GenomeJS value.
+
+```tsx
+const color = useGenomeTrait(genome, "color");
+```
+
+When the Genome mutates, the component renders again with the latest value.
+
+## Installation
+
+```bash
+npm install @genomejs/core @genomejs/react
+```
+
+The package requires React 18 or newer.
+
+## Exports
+
+```ts
+import { useGenomeTrait } from "@genomejs/react";
+```
+
+## Hook signature
+
+```ts
+useGenomeTrait(
+  genome: Genome,
+  name: string,
+): Primitive
+```
+
+### Parameters
+
+| Parameter | Type     | Description                     |
+| --------- | -------- | ------------------------------- |
+| `genome`  | `Genome` | Genome instance to observe      |
+| `name`    | `string` | Primitive or derived token name |
+
+### Return value
+
+```ts
+type Primitive = string | number;
+```
+
+The hook returns the current resolved value of the requested trait.
+
+## Create a shared Genome
+
+Create `lib/theme-genome.ts`:
+
+```ts
+import { Genome } from "@genomejs/core";
+
+export const themeGenome = new Genome({
+  primitives: {
+    lightSurface: "#ffffff",
+    darkSurface: "#121620",
+    lightForeground: "#171923",
+    darkForeground: "#f7f8fb",
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    surface: (dna, context) =>
+      context.mode === "dark" ? dna.darkSurface : dna.lightSurface,
+
+    foreground: (dna, context) =>
+      context.mode === "dark" ? dna.darkForeground : dna.lightForeground,
+
+    spacing: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.baseSpacing) * scale}px`;
+    },
+  },
+});
+
+themeGenome.mutate({
+  mode: "light",
+  scale: 1,
+});
+```
+
+A shared module-level instance is usually preferable to constructing a new Genome every time a component renders.
+
+## Subscribe from a component
+
+Create `components/theme-preview.tsx`:
+
+```tsx
+"use client";
+
+import { useGenomeTrait } from "@genomejs/react";
+
+import { themeGenome } from "@/lib/theme-genome";
+
+export function ThemePreview() {
+  const surface = useGenomeTrait(themeGenome, "surface");
+
+  const foreground = useGenomeTrait(themeGenome, "foreground");
+
+  const spacing = useGenomeTrait(themeGenome, "spacing");
+
+  return (
+    <section
+      style={{
+        display: "grid",
+        gap: String(spacing),
+        padding: String(spacing),
+        backgroundColor: String(surface),
+        color: String(foreground),
+      }}
+    >
+      <h2>Reactive theme</h2>
+
+      <p>Current spacing: {spacing}</p>
+    </section>
+  );
+}
+```
+
+Each hook call subscribes the component to one token name.
+
+## Mutate from React
+
+```tsx
+"use client";
+
+import { useGenomeTrait } from "@genomejs/react";
+
+import { themeGenome } from "@/lib/theme-genome";
+
+export function ThemeControl() {
+  const surface = useGenomeTrait(themeGenome, "surface");
+
+  function useDarkMode() {
+    themeGenome.mutate({
+      mode: "dark",
+    });
+  }
+
+  function useLightMode() {
+    themeGenome.mutate({
+      mode: "light",
+    });
+  }
+
+  return (
+    <div>
+      <p>Current surface: {surface}</p>
+
+      <button type="button" onClick={useLightMode}>
+        Light
+      </button>
+
+      <button type="button" onClick={useDarkMode}>
+        Dark
+      </button>
+    </div>
+  );
+}
+```
+
+Calling `mutate()` resolves the Genome again. Components subscribed to traits then receive the latest snapshots.
+
+## How the hook works
+
+The adapter connects GenomeJS to React using:
+
+```ts
+useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+```
+
+Conceptually:
+
+```text
+Component renders
+      ↓
+useGenomeTrait reads getTrait(name)
+      ↓
+React subscribes to genome.subscribe()
+      ↓
+genome.mutate() resolves
+      ↓
+Genome notifies subscribers
+      ↓
+React reads the new snapshot
+      ↓
+Component renders again
+```
+
+The adapter uses the same Genome snapshot function for browser and server rendering.
+
+## Next.js
+
+`@genomejs/react` is a client-marked module, so components calling `useGenomeTrait()` should be Client Components.
+
+```tsx
+"use client";
+
+import { useGenomeTrait } from "@genomejs/react";
+```
+
+The shared Genome itself may be defined in a separate module:
+
+```ts
+import { Genome } from "@genomejs/core";
+
+export const genome = new Genome({
+  primitives: {},
+  tokens: {},
+});
+```
+
+The Core constructor is safe when no browser DOM exists. Its default target is `null` outside the browser.
+
+## Server rendering
+
+The React adapter supports reading the current trait during React server rendering.
+
+```tsx
+function Message({ genome }: { genome: Genome }) {
+  const message = useGenomeTrait(genome, "message");
+
+  return <p>{message}</p>;
+}
+```
+
+For hydration to remain consistent, use the same initial Genome context for the server output and the browser’s first render.
+
+Apply browser-only context changes after mounting when they depend on APIs such as `window.matchMedia()`.
+
+```tsx
+"use client";
+
+import { useEffect } from "react";
+
+export function BrowserModeBinding() {
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+
+    function updateMode() {
+      themeGenome.mutate({
+        mode: query.matches ? "dark" : "light",
+      });
+    }
+
+    updateMode();
+
+    query.addEventListener("change", updateMode);
+
+    return () => {
+      query.removeEventListener("change", updateMode);
+    };
+  }, []);
+
+  return null;
+}
+```
+
+## Keep the Genome instance stable
+
+Avoid constructing the Genome directly during every render:
+
+```tsx
+function Preview() {
+  const genome = new Genome({
+    primitives: {},
+    tokens: {},
+  });
+
+  const value = useGenomeTrait(genome, "value");
+
+  return <p>{value}</p>;
+}
+```
+
+Each render creates another instance, which changes the subscription source.
+
+Prefer a module-level instance:
+
+```ts
+export const genome = new Genome(config);
+```
+
+Or create it once with React state:
+
+```tsx
+const [genome] = useState(() => new Genome(config));
+```
+
+## Reading multiple traits
+
+Call the hook once for each value:
+
+```tsx
+const surface = useGenomeTrait(genome, "surface");
+
+const foreground = useGenomeTrait(genome, "foreground");
+```
+
+The current adapter does not provide a multi-trait selector hook.
+
+## CSS custom properties
+
+A component does not need to read every trait through React.
+
+GenomeJS also expresses values as CSS properties:
+
+```css
+.card {
+  color: var(--g-foreground);
+  background: var(--g-surface);
+  gap: var(--g-spacing);
+}
+```
+
+Use `useGenomeTrait()` when component logic or rendered text needs the JavaScript value.
+
+Use CSS variables when styling can remain in CSS.
+
+## Unknown trait behavior
+
+The hook reads its snapshot through `genome.getTrait(name)`.
+
+An unknown name therefore throws:
+
+```tsx
+useGenomeTrait(genome, "missingTrait");
+```
+
+Current error:
+
+```text
+Unknown token: "missingTrait"
+```
+
+Check spelling and ensure the primitive or token exists in the Genome configuration.
+
+## Manual subscriptions
+
+Use the Core `subscribe()` method for imperative integrations:
+
+```tsx
+useEffect(() => {
+  return genome.subscribe(() => {
+    synchronizeExternalLibrary(genome.getTrait("spacing"));
+  });
+}, []);
+```
+
+For values rendered by React, prefer `useGenomeTrait()`.
+
+## Common problems
+
+### The component does not update
+
+Confirm that:
+
+- The component calls `useGenomeTrait()`.
+- The same Genome instance is mutated.
+- The requested token name is correct.
+- The component has not created a separate Genome instance.
+
+### Invalid hook call
+
+In a monorepo, ensure the application and `@genomejs/react` resolve the same React installation.
+
+### Hook used in a Server Component
+
+Add the Client Component directive:
+
+```tsx
+"use client";
+```
+
+### A style value has the wrong TypeScript type
+
+The hook returns `string | number`.
+
+Convert values where a specific string is expected:
+
+```tsx
+style={{
+  color: String(color),
+}}
+```
+
+## Notes
+
+- The hook subscribes through `useSyncExternalStore`.
+- It re-renders when the Genome notifies subscribers.
+- Its return type is `string | number`.
+- The Genome instance should remain stable.
+- Unknown trait names throw.
+- Manual cleanup is handled by React’s external-store lifecycle.
+- React 18 or newer is required.
+
+## Related pages
+
+- [`subscribe()`](/docs/core/subscribe)
+- [`getTrait()`](/docs/core/get-trait)
+- [`mutate()`](/docs/core/mutate)
+- [Vue adapter](/docs/frameworks/vue)
+- [Svelte adapter](/docs/frameworks/svelte)

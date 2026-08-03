@@ -1,0 +1,370 @@
+---
+title: Vue
+description: Subscribe Vue components to resolved GenomeJS traits with reactive refs.
+---
+
+The Vue adapter exposes a resolved GenomeJS value as a Vue ref.
+
+```ts
+const color = useGenomeTrait(genome, "color");
+```
+
+The ref updates whenever the Genome mutates.
+
+## Installation
+
+```bash
+npm install @genomejs/core @genomejs/vue
+```
+
+The package requires Vue 3 or newer.
+
+## Export
+
+```ts
+import { useGenomeTrait } from "@genomejs/vue";
+```
+
+## Function signature
+
+```ts
+useGenomeTrait(
+  genome: Genome,
+  name: string,
+): Ref<Primitive>
+```
+
+### Parameters
+
+| Parameter | Type     | Description                     |
+| --------- | -------- | ------------------------------- |
+| `genome`  | `Genome` | Genome instance to observe      |
+| `name`    | `string` | Primitive or derived token name |
+
+### Return value
+
+```ts
+Ref<string | number>;
+```
+
+The ref initially contains the current resolved trait.
+
+## Create a shared Genome
+
+Create `src/lib/theme-genome.ts`:
+
+```ts
+import { Genome } from "@genomejs/core";
+
+export const themeGenome = new Genome({
+  primitives: {
+    lightSurface: "#ffffff",
+    darkSurface: "#121620",
+    lightForeground: "#171923",
+    darkForeground: "#f7f8fb",
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    surface: (dna, context) =>
+      context.mode === "dark" ? dna.darkSurface : dna.lightSurface,
+
+    foreground: (dna, context) =>
+      context.mode === "dark" ? dna.darkForeground : dna.lightForeground,
+
+    spacing: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.baseSpacing) * scale}px`;
+    },
+  },
+});
+
+themeGenome.mutate({
+  mode: "light",
+  scale: 1,
+});
+```
+
+## Use a trait in a component
+
+```vue
+<script setup lang="ts">
+import { useGenomeTrait } from "@genomejs/vue";
+
+import { themeGenome } from "@/lib/theme-genome";
+
+const surface = useGenomeTrait(themeGenome, "surface");
+
+const foreground = useGenomeTrait(themeGenome, "foreground");
+
+const spacing = useGenomeTrait(themeGenome, "spacing");
+</script>
+
+<template>
+  <section
+    :style="{
+      display: 'grid',
+      gap: spacing,
+      padding: spacing,
+      backgroundColor: surface,
+      color: foreground,
+    }"
+  >
+    <h2>Reactive theme</h2>
+
+    <p>
+      Current spacing:
+      {{ spacing }}
+    </p>
+  </section>
+</template>
+```
+
+Vue automatically unwraps refs in templates.
+
+In JavaScript or TypeScript code, read the ref through `.value`:
+
+```ts
+console.log(spacing.value);
+```
+
+## Mutate from Vue
+
+```vue
+<script setup lang="ts">
+import { useGenomeTrait } from "@genomejs/vue";
+
+import { themeGenome } from "@/lib/theme-genome";
+
+const surface = useGenomeTrait(themeGenome, "surface");
+
+function useLightMode() {
+  themeGenome.mutate({
+    mode: "light",
+  });
+}
+
+function useDarkMode() {
+  themeGenome.mutate({
+    mode: "dark",
+  });
+}
+</script>
+
+<template>
+  <div>
+    <p>
+      Current surface:
+      {{ surface }}
+    </p>
+
+    <button type="button" @click="useLightMode">Light</button>
+
+    <button type="button" @click="useDarkMode">Dark</button>
+  </div>
+</template>
+```
+
+## Lifecycle behavior
+
+The adapter:
+
+1. Reads the current value when `useGenomeTrait()` runs
+2. Registers a Genome subscription when the component mounts
+3. Updates the Vue ref after Genome mutations
+4. Unsubscribes when the component unmounts
+
+Conceptually:
+
+```text
+setup()
+   ↓
+ref(genome.getTrait(name))
+   ↓
+component mounts
+   ↓
+genome.subscribe()
+   ↓
+genome.mutate()
+   ↓
+ref.value updates
+   ↓
+Vue updates the template
+   ↓
+component unmounts
+   ↓
+unsubscribe()
+```
+
+You do not need to manage the subscription manually.
+
+## Use the returned ref in script
+
+```ts
+const spacing = useGenomeTrait(genome, "spacing");
+
+watchEffect(() => {
+  console.log(spacing.value);
+});
+```
+
+The value can be used with other Vue reactive APIs because it is a normal ref.
+
+## Reading multiple traits
+
+```ts
+const surface = useGenomeTrait(genome, "surface");
+
+const foreground = useGenomeTrait(genome, "foreground");
+```
+
+The current adapter observes one trait per function call.
+
+## Keep the Genome stable
+
+Avoid constructing a new Genome inside reactive work that may run repeatedly.
+
+Prefer a shared instance:
+
+```ts
+export const genome = new Genome(config);
+```
+
+Or create one stable component-local instance during setup:
+
+```ts
+const genome = new Genome(config);
+```
+
+A top-level `<script setup>` statement runs once for each component instance, not on every reactive update.
+
+## CSS custom properties
+
+Use the generated `--g-*` values directly when JavaScript access is unnecessary:
+
+```vue
+<template>
+  <article class="card">Styled by GenomeJS</article>
+</template>
+
+<style scoped>
+.card {
+  color: var(--g-foreground);
+  background: var(--g-surface);
+  gap: var(--g-spacing);
+}
+</style>
+```
+
+Use `useGenomeTrait()` when:
+
+- The value appears in rendered text
+- Component logic depends on the value
+- Another Vue reactive computation needs it
+
+## Browser bindings
+
+Browser state can mutate the Genome from Vue lifecycle hooks:
+
+```vue
+<script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
+
+import { themeGenome } from "@/lib/theme-genome";
+
+let query: MediaQueryList | undefined;
+
+function updateMode() {
+  if (!query) {
+    return;
+  }
+
+  themeGenome.mutate({
+    mode: query.matches ? "dark" : "light",
+  });
+}
+
+onMounted(() => {
+  query = window.matchMedia("(prefers-color-scheme: dark)");
+
+  updateMode();
+
+  query.addEventListener("change", updateMode);
+});
+
+onUnmounted(() => {
+  query?.removeEventListener("change", updateMode);
+});
+</script>
+```
+
+## Unknown trait behavior
+
+The adapter initializes its ref by calling:
+
+```ts
+genome.getTrait(name);
+```
+
+An unknown name throws:
+
+```ts
+useGenomeTrait(genome, "missingTrait");
+```
+
+Current error:
+
+```text
+Unknown token: "missingTrait"
+```
+
+## Server rendering
+
+The initial ref value is read synchronously from the Genome.
+
+The subscription itself begins in `onMounted()`, so browser updates start after the component mounts.
+
+Keep initial Genome context consistent between server and browser rendering to avoid rendering different first values.
+
+## Common problems
+
+### The ref does not update
+
+Confirm that:
+
+- The component uses the same Genome instance that is being mutated.
+- The component has mounted.
+- The requested trait name exists.
+- The Genome mutation completes without throwing.
+
+### Reading the ref in script shows an object
+
+Use:
+
+```ts
+spacing.value;
+```
+
+Vue only auto-unwraps refs automatically in templates.
+
+### CSS variables appear on the wrong element
+
+Pass the intended target to the Core constructor or use `scope()` for a component-specific target.
+
+## Notes
+
+- The adapter returns `Ref<Primitive>`.
+- The initial value is read immediately.
+- Subscription begins when the component mounts.
+- Cleanup occurs when the component unmounts.
+- Unknown trait names throw.
+- Vue 3 or newer is required.
+
+## Related pages
+
+- [`subscribe()`](/docs/core/subscribe)
+- [`getTrait()`](/docs/core/get-trait)
+- [`mutate()`](/docs/core/mutate)
+- [React adapter](/docs/frameworks/react)
+- [Svelte adapter](/docs/frameworks/svelte)
