@@ -1,0 +1,337 @@
+---
+title: Contributing
+description: Set up the GenomeJS monorepo, run verification, and prepare focused contributions.
+---
+
+GenomeJS welcomes bug fixes, tests, documentation improvements, and focused feature proposals.
+
+The root `CONTRIBUTING.md` file in the package repository is the canonical contribution guide.
+
+## Repository
+
+```text
+https://github.com/DavidAsrorxonov/genome
+```
+
+## Prerequisites
+
+Use:
+
+- Node.js 20
+- npm
+- Git
+
+Node 20 matches the current CI environment.
+
+## Clone and install
+
+```bash
+git clone https://github.com/DavidAsrorxonov/genome.git
+cd genome
+npm install
+```
+
+Use the lockfile for a clean reproducible installation:
+
+```bash
+npm ci
+```
+
+## Repository structure
+
+```text
+genome/
+├── packages/
+│   ├── core/
+│   ├── react/
+│   ├── vue/
+│   └── svelte/
+├── .github/workflows/
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── tsconfig.base.json
+├── vitest.config.ts
+└── vitest.setup.ts
+```
+
+## Run verification
+
+### Type check
+
+```bash
+npx tsc -b --pretty
+```
+
+### Build every workspace
+
+```bash
+npm run build --workspaces --if-present
+```
+
+### Run tests
+
+```bash
+npx vitest run
+```
+
+### Match CI locally
+
+```bash
+npm ci
+npx tsc -b --pretty
+npm run build --workspaces --if-present
+npx vitest run
+```
+
+## Choose the correct package
+
+### Core changes
+
+Use:
+
+```text
+packages/core
+```
+
+For:
+
+- Dependency tracking
+- Graph validation
+- Resolution
+- Runtime context
+- CSS expression
+- Errors
+- Utilities
+- Browser bindings
+
+Core must remain framework-neutral.
+
+### React changes
+
+Use:
+
+```text
+packages/react
+```
+
+For:
+
+- React subscriptions
+- React lifecycle behavior
+- React SSR integration
+- React-specific tests
+
+### Vue changes
+
+Use:
+
+```text
+packages/vue
+```
+
+For:
+
+- Vue refs
+- Vue mounting and cleanup
+- Vue-specific tests
+
+### Svelte changes
+
+Use:
+
+```text
+packages/svelte
+```
+
+For:
+
+- Svelte 5 runes
+- Svelte package output
+- Svelte-specific tests
+
+## Add tests
+
+Tests are colocated with source:
+
+```text
+packages/*/src/**/*.test.ts
+packages/*/src/**/*.test.tsx
+```
+
+A bug fix should include a regression test when practical.
+
+Important behavior to preserve includes:
+
+- Correct dependency order
+- Exact cycle reporting
+- Missing-reference reporting
+- Runtime mutation
+- CSS write deduplication
+- Scope isolation
+- Framework updates
+- Subscription cleanup
+- Server rendering
+- Browser listener cleanup
+
+## Keep token functions pure
+
+Token functions may run during dependency tracking and normal resolution.
+
+Avoid:
+
+```ts
+const tokens = {
+  spacing: (dna) => {
+    sendAnalyticsEvent();
+
+    return dna.baseSpacing;
+  },
+};
+```
+
+Prefer:
+
+```ts
+const tokens = {
+  spacing: (dna) => dna.baseSpacing,
+};
+```
+
+## Preserve server safety
+
+Core code should not assume:
+
+```ts
+window;
+document;
+```
+
+Browser-only work belongs in explicit browser utilities or framework mounting lifecycles.
+
+## Clean up external resources
+
+Any feature that creates:
+
+- Event listeners
+- Media-query listeners
+- Resize observers
+- Genome subscriptions
+
+must provide and test cleanup.
+
+## Public API changes
+
+When changing a public API:
+
+1. Add or update tests.
+2. Update JSDoc comments.
+3. Update package README examples.
+4. Update the website documentation.
+5. Update `CHANGELOG.md`.
+6. Document any migration requirements.
+
+## Create a branch
+
+```bash
+git switch -c feat/descriptive-name
+```
+
+Examples:
+
+```text
+feat/core-snapshot
+fix/react-subscription
+docs/browser-support
+test/vue-cleanup
+chore/release-0.1.3
+```
+
+## Commit messages
+
+Prefer scoped, focused messages:
+
+```text
+feat(core): expose resolved token names
+fix(react): stabilize server snapshots
+docs: clarify scope independence
+test(svelte): cover subscription cleanup
+chore: release GenomeJS 0.1.3
+```
+
+## Pull request checklist
+
+A pull request should explain:
+
+- What changed
+- Why it changed
+- Affected packages
+- Public API impact
+- Tests added or changed
+- Documentation impact
+- Browser implications
+- SSR implications
+- Framework compatibility implications
+
+Before opening the pull request:
+
+```bash
+npx tsc -b --pretty
+npm run build --workspaces --if-present
+npx vitest run
+```
+
+## Reporting a bug
+
+Include:
+
+- Affected package
+- Package version
+- Framework version
+- Browser or Node version
+- Minimal reproduction
+- Expected behavior
+- Actual behavior
+- Complete error message
+
+Do not post secrets, access tokens, or private application data.
+
+## Feature proposals
+
+Explain:
+
+- The problem
+- Why the existing API is insufficient
+- Proposed public behavior
+- Package boundaries
+- SSR behavior
+- Browser behavior
+- Framework implications
+- Backward compatibility
+
+## Documentation contributions
+
+The public website documentation lives under:
+
+```text
+content/docs
+```
+
+Documentation examples should:
+
+- Use published public APIs
+- Be copy-pasteable
+- Include cleanup
+- Distinguish browser and server behavior
+- Avoid unsupported performance or browser claims
+- Document current limitations honestly
+
+## License
+
+Contributions are made under the repository's MIT License.
+
+## Related pages
+
+- [Architecture](/docs/project/architecture)
+- [License](/docs/project/license)
+- [Error Reference](/docs/reference/error-reference)

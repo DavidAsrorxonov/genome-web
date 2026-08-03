@@ -72,6 +72,27 @@ const footerGroups: FooterGroup[] = [
       },
     ],
   },
+  {
+    title: "Reference",
+    links: [
+      {
+        label: "Changelog",
+        href: "/docs/project/changelog",
+      },
+      {
+        label: "Contributing",
+        href: "/docs/project/contributing",
+      },
+      {
+        label: "Architecture",
+        href: "/docs/project/architecture",
+      },
+      {
+        label: "License",
+        href: "/docs/project/license",
+      },
+    ],
+  },
 ];
 
 function FooterLinkItem({ link }: { link: FooterLink }) {

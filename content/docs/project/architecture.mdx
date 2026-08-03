@@ -1,0 +1,641 @@
+---
+title: Architecture
+description: Understand the GenomeJS compiler, monorepo boundaries, resolution pipeline, adapters, builds, tests, and runtime constraints.
+---
+
+GenomeJS is organized as a small TypeScript monorepo.
+
+The framework-neutral Core package owns token compilation and runtime behavior. React, Vue, and Svelte packages adapt Core subscriptions into each framework's reactive model.
+
+```text
+Application configuration
+          ↓
+   @genomejs/core
+          ↓
+Resolved traits and CSS output
+          ↓
+React / Vue / Svelte adapters
+```
+
+## Repository layout
+
+```text
+genome/
+├── packages/
+│   ├── core/
+│   │   └── src/
+│   ├── react/
+│   │   └── src/
+│   ├── vue/
+│   │   └── src/
+│   └── svelte/
+│       └── src/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── tsconfig.base.json
+├── vitest.config.ts
+└── vitest.setup.ts
+```
+
+The root package is private and manages:
+
+```text
+packages/*
+```
+
+as npm workspaces.
+
+## Package dependency direction
+
+```text
+@genomejs/core
+      ↑
+      ├── @genomejs/react
+      ├── @genomejs/vue
+      └── @genomejs/svelte
+```
+
+Core does not depend on the framework adapters.
+
+This keeps the compiler usable in:
+
+- Vanilla TypeScript
+- Browser applications
+- Server environments
+- React
+- Vue
+- Svelte
+- Custom integrations
+
+## Core configuration
+
+A Genome begins with:
+
+```ts
+interface GenomeConfig {
+  primitives: Record<string, Primitive>;
+
+  tokens: Record<string, TokenDefinition>;
+}
+```
+
+Example:
+
+```ts
+const genome = new Genome({
+  primitives: {
+    baseSpacing: 16,
+  },
+
+  tokens: {
+    spacing: (dna, context) => {
+      const scale = typeof context.scale === "number" ? context.scale : 1;
+
+      return `${Number(dna.baseSpacing) * scale}px`;
+    },
+  },
+});
+```
+
+## Compiler pipeline
+
+Construction performs:
+
+```text
+Copy configuration
+      ↓
+Discover dependencies
+      ↓
+Validate references
+      ↓
+Sort derived tokens
+      ↓
+Resolve values
+      ↓
+Express CSS properties
+```
+
+## Dependency discovery
+
+Derived token functions receive a recording DNA proxy during the tracking pass.
+
+```ts
+spacing: (dna) => Number(dna.baseSpacing) * 2;
+```
+
+Reading:
+
+```ts
+dna.baseSpacing;
+```
+
+records this relationship:
+
+```text
+baseSpacing → spacing
+```
+
+Dependencies do not need a separate declaration.
+
+## Tracking context
+
+During dependency tracking, runtime context is represented by an inert proxy that returns:
+
+```ts
+undefined;
+```
+
+Dependency compilation tracks DNA reads, not context property reads.
+
+Token relationships should therefore be determined by stable DNA access patterns.
+
+## Missing-reference validation
+
+Known graph values are:
+
+```text
+Primitive names
+Function-valued token names
+```
+
+When a token reads an unknown DNA name, construction throws:
+
+```ts
+UnresolvedTokenError;
+```
+
+```text
+Token "surface" references undefined token(s): missingSurface
+```
+
+## Resolution ordering
+
+GenomeJS uses topological ordering to resolve derived values after their dependencies.
+
+Conceptually:
+
+```text
+baseSpacing
+     ↓
+controlSpacing
+     ↓
+sectionSpacing
+```
+
+The resolver executes:
+
+```text
+controlSpacing
+sectionSpacing
+```
+
+in that order.
+
+## Circular dependencies
+
+If the graph cannot be fully ordered, GenomeJS traces a cycle and throws:
+
+```ts
+CircularDependencyError;
+```
+
+Example:
+
+```text
+first → second → first
+```
+
+Graph failures occur early during construction rather than producing partially resolved output.
+
+## Value resolution
+
+Resolution starts with a new DNA record containing the primitives:
+
+```ts
+const dna = {
+  ...primitives,
+};
+```
+
+Each derived function runs in compiled order:
+
+```ts
+dna[key] = tokenFunction(dna, context);
+```
+
+The final DNA record is stored internally.
+
+Individual values are exposed through:
+
+```ts
+genome.getTrait(name);
+```
+
+The complete DNA snapshot is not currently public.
+
+## Runtime context
+
+Genome context starts as:
+
+```ts
+{
+}
+```
+
+`mutate()` performs a shallow merge:
+
+```ts
+this.context = {
+  ...this.context,
+  ...patch,
+};
+```
+
+Then it runs resolution again.
+
+```text
+Context patch
+     ↓
+Shallow merge
+     ↓
+Resolve all derived tokens
+     ↓
+Express changed CSS
+     ↓
+Notify subscribers
+```
+
+## CSS expression
+
+When a target exists, every resolved DNA entry maps to a CSS custom property.
+
+```text
+buttonColor
+```
+
+becomes:
+
+```text
+--g-button-color
+```
+
+GenomeJS compares the new string value with the last expressed value.
+
+It calls:
+
+```ts
+target.style.setProperty(cssVariable, value);
+```
+
+only when the value changed.
+
+This avoids repeated identical CSS writes.
+
+## No-target operation
+
+The Core constructor accepts:
+
+```ts
+HTMLElement | null;
+```
+
+In a browser, the default target is:
+
+```ts
+document.documentElement;
+```
+
+Outside a browser, the default is:
+
+```ts
+null;
+```
+
+When no target exists:
+
+- Compilation works
+- Resolution works
+- Mutation works
+- Trait reading works
+- Subscriptions work
+- CSS expression is skipped
+
+This is the basis of Core's server-rendering safety.
+
+## Subscriptions
+
+Subscribers are stored in a set:
+
+```ts
+Set<() => void>;
+```
+
+After resolution and CSS expression, GenomeJS invokes every listener.
+
+```ts
+const unsubscribe = genome.subscribe(listener);
+```
+
+The returned cleanup removes the listener.
+
+GenomeJS does not currently catch subscriber exceptions.
+
+## Scopes
+
+`scope()` creates a new Genome using:
+
+- The parent's primitive definitions
+- The parent's token definitions
+- Another `HTMLElement`
+- The parent's current context
+- Optional context overrides
+
+```ts
+const child = parent.scope(element, {
+  density: "compact",
+});
+```
+
+The child becomes independent after creation.
+
+Future parent mutations do not automatically propagate.
+
+## React adapter
+
+The React package uses:
+
+```ts
+useSyncExternalStore();
+```
+
+It provides:
+
+- A Genome subscription function
+- A trait snapshot function
+- The same snapshot for server rendering
+
+```text
+Genome notification
+       ↓
+React reads getTrait()
+       ↓
+Component rerenders
+```
+
+The package supports React 18 and newer.
+
+## Vue adapter
+
+The Vue package:
+
+1. Creates a ref from `getTrait()`
+2. Subscribes after mounting
+3. Updates the ref after Genome changes
+4. Unsubscribes during unmounting
+
+```text
+Genome notification
+       ↓
+ref.value changes
+       ↓
+Vue updates dependents
+```
+
+## Svelte adapter
+
+The Svelte package uses:
+
+```text
+$state
+$effect
+```
+
+The current value is exposed through:
+
+```ts
+trait.value;
+```
+
+The effect creates and cleans up the Genome subscription.
+
+The package ships rune-aware source that must be processed by a Svelte 5-aware consumer.
+
+## TypeScript project references
+
+The root TypeScript project references:
+
+```text
+packages/core
+packages/react
+packages/vue
+packages/svelte
+```
+
+This enables repository-wide project checking:
+
+```bash
+npx tsc -b --pretty
+```
+
+## Package builds
+
+Core, React, and Vue produce package output with TypeScript-aware bundling.
+
+Their published packages include:
+
+- ESM
+- CommonJS
+- Type declarations
+- Source maps
+
+Svelte uses Svelte package tooling and publishes a Svelte-specific entry.
+
+## Tests
+
+Vitest runs in a jsdom environment.
+
+Included patterns:
+
+```text
+packages/*/src/**/*.test.ts
+packages/*/src/**/*.test.tsx
+```
+
+The test configuration includes Svelte and Svelte Testing Library plugins.
+
+Test coverage includes:
+
+- Core dependency resolution
+- Graph errors
+- Runtime mutation
+- CSS write deduplication
+- Browser bindings
+- React updates
+- React SSR
+- Vue updates
+- Svelte updates
+
+## Continuous integration
+
+CI runs on:
+
+```text
+push to main
+pull requests targeting main
+```
+
+Current steps:
+
+```text
+npm ci
+npx tsc -b --pretty
+npm run build --workspaces --if-present
+npx vitest run
+```
+
+The workflow uses:
+
+```text
+Node.js 20
+Ubuntu
+```
+
+## Public package exports
+
+### Core
+
+```text
+Genome
+CircularDependencyError
+UnresolvedTokenError
+contrastRatio
+lockContrast
+fluidScale
+bindMediaQueries
+bindContainerSize
+```
+
+Types:
+
+```text
+Primitive
+RuntimeContext
+DNAReader
+TokenFn
+TokenDefinition
+GenomeConfig
+Mutator
+```
+
+### React
+
+```text
+useGenomeTrait
+```
+
+### Vue
+
+```text
+useGenomeTrait
+```
+
+### Svelte
+
+```text
+genomeTrait
+```
+
+## Current architectural limitations
+
+### Static entries under `tokens`
+
+The public `TokenDefinition` type allows:
+
+```ts
+Primitive | TokenFn;
+```
+
+But the compiler currently treats only function-valued token entries as derived graph nodes.
+
+Static values should be placed in:
+
+```ts
+primitives;
+```
+
+until the type and runtime behavior are aligned.
+
+### Private compiled graph
+
+Dependency order and dependency sets are internal.
+
+The public API does not currently expose the compiled graph.
+
+### No complete snapshot getter
+
+Individual traits are readable through:
+
+```ts
+getTrait();
+```
+
+The complete DNA record is private.
+
+### No context getter
+
+Runtime context is private.
+
+Applications should track important application state independently rather than depending on a context snapshot API that does not exist.
+
+### No `destroy()`
+
+Genome does not currently expose a destruction method.
+
+Consumers must clean up:
+
+- Subscriptions
+- Media-query bindings
+- Resize observers
+- External synchronization
+
+### Scope independence
+
+Scopes copy parent context at creation.
+
+They do not maintain a live parent-child inheritance relationship.
+
+### Broad trait typing
+
+Trait names are accepted as strings and values return:
+
+```ts
+string | number;
+```
+
+Per-token key and value inference is not currently generated.
+
+## Design principles
+
+GenomeJS architecture prioritizes:
+
+- Framework independence
+- Explicit runtime context
+- Pure token relationships
+- Early graph validation
+- Normal CSS custom properties
+- Small framework adapters
+- Synchronous predictable mutation
+- Browser-safe Core construction
+- Honest package boundaries
+
+## Related pages
+
+- [Core Concepts](/docs/core-concepts)
+- [API Reference](/docs/reference/api-reference)
+- [Error Reference](/docs/reference/error-reference)
+- [Browser Support](/docs/reference/browser-support)
+- [Contributing](/docs/project/contributing)

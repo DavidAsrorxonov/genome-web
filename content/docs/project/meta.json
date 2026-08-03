@@ -1,0 +1,6 @@
+{
+  "title": "Project",
+  "description": "GenomeJS releases, contribution workflow, architecture, and licensing.",
+  "defaultOpen": true,
+  "pages": ["changelog", "contributing", "architecture", "license"]
+}

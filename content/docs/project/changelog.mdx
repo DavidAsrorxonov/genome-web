@@ -1,0 +1,195 @@
+---
+title: Changelog
+description: Review notable GenomeJS package releases and compatibility changes.
+---
+
+This page summarizes public GenomeJS releases.
+
+The repository's root `CHANGELOG.md` is the canonical release record. This page should be updated alongside it whenever a package version is released.
+
+## Current package versions
+
+| Package            | Version |
+| ------------------ | ------- |
+| `@genomejs/core`   | `0.1.2` |
+| `@genomejs/react`  | `0.1.2` |
+| `@genomejs/vue`    | `0.1.1` |
+| `@genomejs/svelte` | `0.1.1` |
+
+The packages do not currently share one mandatory version number.
+
+A release may update only the packages affected by a change.
+
+## Unreleased
+
+### Added
+
+- A formal root changelog.
+- Contribution guidelines.
+- A standalone MIT license file.
+- Full public documentation covering:
+  - Core concepts
+  - Core methods
+  - React, Vue, and Svelte
+  - Utility APIs
+  - Practical guides
+  - API and error reference
+  - TypeScript types
+  - Browser and SSR support
+  - Project architecture
+
+## `0.1.2`
+
+Released:
+
+```text
+August 2, 2026
+```
+
+Updated packages:
+
+```text
+@genomejs/core
+@genomejs/react
+```
+
+### Added
+
+- React server-rendering coverage for `useGenomeTrait()`.
+- A server snapshot for the React external-store integration.
+- React 19 development and testing coverage.
+
+### Changed
+
+- Core's default DOM target became safe in server environments.
+- The `Genome` constructor accepts an `HTMLElement` or `null`.
+- Core skips CSS expression when no target exists.
+- The React adapter uses a stable external-store subscription and snapshot.
+- Core and React were updated to `0.1.2`.
+
+### Compatibility
+
+Core can resolve tokens without a browser document:
+
+```ts
+const genome = new Genome(config, null);
+```
+
+The React adapter can read the current trait during server rendering:
+
+```tsx
+const value = useGenomeTrait(genome, "value");
+```
+
+Browser CSS output still requires a real target.
+
+## `0.1.1`
+
+Released:
+
+```text
+August 1, 2026
+```
+
+Updated packages:
+
+```text
+@genomejs/core
+@genomejs/react
+@genomejs/vue
+@genomejs/svelte
+```
+
+### Added
+
+- Repository README.
+- Core README.
+- React README.
+- Vue README.
+- Svelte README.
+- Installation examples for every package.
+- Basic public usage examples.
+- Repository, homepage, and issue metadata.
+- Expanded public JSDoc comments.
+
+### Changed
+
+- The package scope became:
+
+```text
+@genomejs
+```
+
+- All four packages were updated from `0.1.0` to `0.1.1`.
+- Package build cleanup was improved to prevent test declaration artifacts from being published.
+
+## Earlier development
+
+Initial development introduced:
+
+- Automatic dependency discovery
+- Topological token resolution
+- Circular dependency reporting
+- Missing token reporting
+- Runtime context mutation
+- CSS custom-property output
+- Scoped Genome instances
+- Contrast measurement and adjustment
+- Fluid CSS scaling
+- Media-query bindings
+- Container-size bindings
+- React integration
+- Vue integration
+- Svelte 5 integration
+- TypeScript project references
+- Vitest coverage
+- GitHub Actions CI
+
+The initial `0.1.0` work predates formal changelog tracking, so this documentation does not invent a single historical release date for it.
+
+## Versioning
+
+GenomeJS uses semantic version numbers:
+
+```text
+MAJOR.MINOR.PATCH
+```
+
+While the project remains below `1.0.0`, minor releases may contain breaking public API changes.
+
+Review the changelog before upgrading.
+
+## Updating the changelog
+
+Every release should document:
+
+- Package versions
+- Release date
+- Added APIs
+- Changed behavior
+- Fixed bugs
+- Removed APIs
+- Compatibility changes
+- Migration requirements
+
+Changes should first be added under:
+
+```text
+Unreleased
+```
+
+Then moved into a versioned section during release preparation.
+
+## Repository history
+
+The full commit history remains available in the project repository:
+
+```text
+https://github.com/DavidAsrorxonov/genome
+```
+
+## Related pages
+
+- [Contributing](/docs/project/contributing)
+- [Architecture](/docs/project/architecture)
+- [API Reference](/docs/reference/api-reference)
