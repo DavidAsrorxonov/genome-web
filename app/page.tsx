@@ -1,13 +1,13 @@
-import { CapabilityGrid } from "@/components/capability-grid";
-import { FinalCta } from "@/components/final-cta";
-import { FrameworkShowcase } from "@/components/framework-showcase";
-import { HeroCompilerDemo } from "@/components/hero-compiler-demo";
-import { HowItWorks } from "@/components/how-it-works";
-import { Landing } from "@/components/landing";
-import { ProblemComparison } from "@/components/problem-comparison";
-import { ReliabilitySection } from "@/components/reliability-section";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { CapabilityGrid } from "@/components/home/capability-grid";
+import { FinalCta } from "@/components/home/final-cta";
+import { FrameworkShowcase } from "@/components/home/framework-showcase";
+import { HeroCompilerDemo } from "@/components/home/hero-compiler-demo";
+import { HowItWorks } from "@/components/home/how-it-works";
+import { Landing } from "@/components/home/landing";
+import { ProblemComparison } from "@/components/home/problem-comparison";
+import { ReliabilitySection } from "@/components/home/reliability-section";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
 
 function CompilerDemoSection() {

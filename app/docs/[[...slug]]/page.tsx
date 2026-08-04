@@ -7,7 +7,7 @@ import {
   DocsTitle,
 } from "fumadocs-ui/layouts/docs/page";
 
-import { getMDXComponents } from "@/components/mdx";
+import { getMDXComponents } from "@/components/docs/mdx";
 import { source } from "@/lib/source";
 
 type PageProps = {

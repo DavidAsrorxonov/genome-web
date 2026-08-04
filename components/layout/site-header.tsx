@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 
 import { GitHub } from "@/components/icons/github";
 import { Logo } from "@/components/logo";
-import { MobileNavigation } from "@/components/mobile-navigation";
+import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { NPM } from "@/components/icons/npm";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";

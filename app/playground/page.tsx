@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 import { PlaygroundShell } from "@/components/playground/playground-shell";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
 
 export const metadata: Metadata = {
   title: "Playground | GenomeJS",
