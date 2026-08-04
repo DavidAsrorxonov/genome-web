@@ -3,6 +3,8 @@ import { ArrowRight, Braces, Network, Terminal, Zap } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { packages } from "@/constants/packages";
+import { routes } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 
 const highlights = [
@@ -71,7 +73,7 @@ export function Landing() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/docs"
+                href={routes.docs}
                 className={cn(
                   buttonVariants({
                     size: "lg",
@@ -84,7 +86,7 @@ export function Landing() {
               </Link>
 
               <Link
-                href="/playground"
+                href={routes.playground}
                 className={cn(
                   buttonVariants({
                     variant: "outline",
@@ -107,7 +109,7 @@ export function Landing() {
               />
 
               <code className="overflow-x-auto whitespace-nowrap">
-                npm install @genomejs/core
+                {packages.core.install}
               </code>
             </div>
 

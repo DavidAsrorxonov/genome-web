@@ -16,6 +16,7 @@ import { Svelte as SvelteIcon } from "@/components/icons/svelte";
 import { Vue as VueIcon } from "@/components/icons/vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { packages } from "@/constants/packages";
 import {
   createFrameworkDemoGenome,
   initialFrameworkDemoContext,
@@ -41,11 +42,10 @@ const frameworks: Framework[] = [
   {
     id: "core",
     name: "Core",
-    packageName: "@genomejs/core",
+    packageName: packages.core.name,
     description: "The framework-neutral token compiler and runtime.",
-    installation: "npm install @genomejs/core",
-    docsUrl:
-      "https://github.com/DavidAsrorxonov/genome/tree/main/packages/core#readme",
+    installation: packages.core.install,
+    docsUrl: packages.core.docs,
     icon: CoreIcon,
     code: `import { Genome } from "@genomejs/core";
 
@@ -66,12 +66,11 @@ const color =
   {
     id: "react",
     name: "React",
-    packageName: "@genomejs/react",
+    packageName: packages.react.name,
     description:
       "Subscribe to resolved traits through React's external-store model.",
-    installation: "npm install @genomejs/core @genomejs/react",
-    docsUrl:
-      "https://github.com/DavidAsrorxonov/genome/tree/main/packages/react#readme",
+    installation: packages.react.install,
+    docsUrl: packages.react.docs,
     icon: ReactIcon,
     code: `"use client";
 
@@ -94,11 +93,10 @@ function Heading() {
   {
     id: "vue",
     name: "Vue",
-    packageName: "@genomejs/vue",
+    packageName: packages.vue.name,
     description: "Expose reactive Genome traits as native Vue refs.",
-    installation: "npm install @genomejs/core @genomejs/vue",
-    docsUrl:
-      "https://github.com/DavidAsrorxonov/genome/tree/main/packages/vue#readme",
+    installation: packages.vue.install,
+    docsUrl: packages.vue.docs,
     icon: VueIcon,
     code: `<script setup lang="ts">
 import { useGenomeTrait }
@@ -119,11 +117,10 @@ const color = useGenomeTrait(
   {
     id: "svelte",
     name: "Svelte",
-    packageName: "@genomejs/svelte",
+    packageName: packages.svelte.name,
     description: "Consume reactive traits through a Svelte rune-aware wrapper.",
-    installation: "npm install @genomejs/core @genomejs/svelte",
-    docsUrl:
-      "https://github.com/DavidAsrorxonov/genome/tree/main/packages/svelte#readme",
+    installation: packages.svelte.install,
+    docsUrl: packages.svelte.docs,
     icon: SvelteIcon,
     note: "The Svelte adapter ships rune-aware source and requires a Svelte-aware downstream bundler.",
     code: `<script lang="ts">

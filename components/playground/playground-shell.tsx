@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PlaygroundWorkspace } from "@/components/playground/playground-workspace";
+import { routes } from "@/constants/routes";
 import type { PlaygroundUrlState } from "@/lib/playground/url-state";
 
 interface PlaygroundShellProps {
@@ -68,7 +69,7 @@ export function PlaygroundShell({ initialState }: PlaygroundShellProps) {
             </div>
 
             <Link
-              href="/docs/core-concepts"
+              href={routes.coreConcepts}
               className="inline-flex min-h-11 items-center gap-2 rounded-lg border bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Review core concepts

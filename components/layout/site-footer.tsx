@@ -1,6 +1,9 @@
 import Link from "next/link";
 
 import { Logo } from "@/components/brand/logo";
+import { packages } from "@/constants/packages";
+import { routes } from "@/constants/routes";
+import { siteLinks } from "@/constants/site";
 
 type FooterLink = {
   label: string;
@@ -19,11 +22,11 @@ const footerGroups: FooterGroup[] = [
     links: [
       {
         label: "Documentation",
-        href: "/docs",
+        href: routes.docs,
       },
       {
         label: "Playground",
-        href: "/playground",
+        href: routes.playground,
       },
     ],
   },
@@ -32,22 +35,22 @@ const footerGroups: FooterGroup[] = [
     links: [
       {
         label: "Core",
-        href: "https://www.npmjs.com/package/@genomejs/core",
+        href: packages.core.npm,
         external: true,
       },
       {
         label: "React",
-        href: "https://www.npmjs.com/package/@genomejs/react",
+        href: packages.react.npm,
         external: true,
       },
       {
         label: "Vue",
-        href: "https://www.npmjs.com/package/@genomejs/vue",
+        href: packages.vue.npm,
         external: true,
       },
       {
         label: "Svelte",
-        href: "https://www.npmjs.com/package/@genomejs/svelte",
+        href: packages.svelte.npm,
         external: true,
       },
     ],
@@ -57,17 +60,17 @@ const footerGroups: FooterGroup[] = [
     links: [
       {
         label: "GitHub",
-        href: "https://github.com/DavidAsrorxonov/genome",
+        href: siteLinks.githubRepo,
         external: true,
       },
       {
         label: "Issues",
-        href: "https://github.com/DavidAsrorxonov/genome/issues",
+        href: siteLinks.githubIssues,
         external: true,
       },
       {
         label: "Contributing",
-        href: "/docs/project/contributing",
+        href: routes.contributing,
       },
     ],
   },
@@ -76,19 +79,19 @@ const footerGroups: FooterGroup[] = [
     links: [
       {
         label: "Changelog",
-        href: "/docs/project/changelog",
+        href: routes.changelog,
       },
       {
         label: "Contributing",
-        href: "/docs/project/contributing",
+        href: routes.contributing,
       },
       {
         label: "Architecture",
-        href: "/docs/project/architecture",
+        href: routes.architecture,
       },
       {
         label: "License",
-        href: "/docs/project/license",
+        href: routes.license,
       },
     ],
   },
@@ -127,7 +130,7 @@ export function SiteFooter() {
         <div className="grid gap-10 md:grid-cols-[1.4fr_2fr]">
           <div className="max-w-sm">
             <Link
-              href="/"
+              href={routes.home}
               aria-label="GenomeJS homepage"
               className="inline-flex rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
@@ -163,7 +166,7 @@ export function SiteFooter() {
           <p>
             Built and maintained by{" "}
             <a
-              href="https://github.com/DavidAsrorxonov"
+              href={siteLinks.authorGithub}
               target="_blank"
               rel="noreferrer"
               className="font-medium text-foreground underline-offset-4 hover:underline"

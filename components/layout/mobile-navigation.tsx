@@ -16,30 +16,33 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { packages } from "@/constants/packages";
+import { routes } from "@/constants/routes";
+import { siteLinks } from "@/constants/site";
 import { cn } from "@/lib/utils";
 
 const internalLinks = [
   {
     label: "Documentation",
     description: "Installation, concepts, and API guides.",
-    href: "/docs",
+    href: routes.docs,
   },
   {
     label: "Playground",
     description: "Mutate context and inspect live output.",
-    href: "/playground",
+    href: routes.playground,
   },
 ];
 
 const externalLinks = [
   {
     label: "GitHub",
-    href: "https://github.com/DavidAsrorxonov/genome",
+    href: siteLinks.githubRepo,
     icon: GitHub,
   },
   {
     label: "npm",
-    href: "https://www.npmjs.com/package/@genomejs/core",
+    href: packages.core.npm,
     icon: NPM,
   },
 ];
@@ -133,7 +136,7 @@ export function MobileNavigation() {
 
         <div className="border-t p-4">
           <Link
-            href="/docs"
+            href={routes.docs}
             onClick={closeNavigation}
             className={cn(
               buttonVariants({

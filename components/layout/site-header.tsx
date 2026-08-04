@@ -10,16 +10,19 @@ import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { NPM } from "@/components/icons/npm";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
+import { packages } from "@/constants/packages";
+import { routes } from "@/constants/routes";
+import { siteLinks } from "@/constants/site";
 import { cn } from "@/lib/utils";
 
 const navigation = [
   {
     label: "Docs",
-    href: "/docs",
+    href: routes.docs,
   },
   {
     label: "Playground",
-    href: "/playground",
+    href: routes.playground,
   },
 ];
 
@@ -53,7 +56,7 @@ export function SiteHeader() {
     >
       <div className="mx-auto flex h-14 w-full max-w-310 items-center gap-4 px-4 sm:px-6">
         <Link
-          href="/"
+          href={routes.home}
           aria-label="GenomeJS homepage"
           className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
@@ -80,7 +83,7 @@ export function SiteHeader() {
 
         <div className="ml-auto flex items-center gap-1">
           <a
-            href="https://github.com/DavidAsrorxonov/genome"
+            href={siteLinks.githubRepo}
             target="_blank"
             rel="noreferrer"
             aria-label="GenomeJS on GitHub"
@@ -94,7 +97,7 @@ export function SiteHeader() {
           </a>
 
           <a
-            href="https://www.npmjs.com/package/@genomejs/core"
+            href={packages.core.npm}
             target="_blank"
             rel="noreferrer"
             aria-label="GenomeJS on npm"
@@ -113,7 +116,7 @@ export function SiteHeader() {
           <ThemeToggle />
 
           <Link
-            href="/docs"
+            href={routes.docs}
             className={cn(
               buttonVariants({
                 size: "sm",

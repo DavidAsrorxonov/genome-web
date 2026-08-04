@@ -11,16 +11,17 @@ import {
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import { packages } from "@/constants/packages";
+import { routes } from "@/constants/routes";
+import { siteLinks } from "@/constants/site";
 import { cn } from "@/lib/utils";
-
-const installationCommand = "npm install @genomejs/core";
 
 export function FinalCta() {
   const [copied, setCopied] = useState(false);
 
   async function copyInstallationCommand() {
     try {
-      await navigator.clipboard.writeText(installationCommand);
+      await navigator.clipboard.writeText(packages.core.install);
 
       setCopied(true);
 
@@ -93,7 +94,7 @@ export function FinalCta() {
               />
 
               <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-sm">
-                {installationCommand}
+                {packages.core.install}
               </code>
 
               <Button
@@ -123,7 +124,7 @@ export function FinalCta() {
 
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
-                href="/docs"
+                href={routes.docs}
                 className={cn(
                   buttonVariants({
                     size: "lg",
@@ -136,7 +137,7 @@ export function FinalCta() {
               </Link>
 
               <a
-                href="https://github.com/DavidAsrorxonov/genome"
+                href={siteLinks.githubRepo}
                 target="_blank"
                 rel="noreferrer"
                 className={cn(

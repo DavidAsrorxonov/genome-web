@@ -1,5 +1,8 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
+import { routes } from "@/constants/routes";
+import { siteLinks } from "@/constants/site";
+
 export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
@@ -8,11 +11,11 @@ export function baseOptions(): BaseLayoutProps {
     links: [
       {
         text: "Playground",
-        url: "/playground",
+        url: routes.playground,
       },
       {
         text: "GitHub",
-        url: "https://github.com/DavidAsrorxonov/genome",
+        url: siteLinks.githubRepo,
         external: true,
       },
     ],
