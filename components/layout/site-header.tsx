@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { GitHub } from "@/components/icons/github";
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/brand/logo";
 import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { NPM } from "@/components/icons/npm";
 import { ThemeToggle } from "@/components/theme-toggle";

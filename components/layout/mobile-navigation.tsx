@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Menu } from "lucide-react";
 
 import { GitHub } from "@/components/icons/github";
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/brand/logo";
 import { NPM } from "@/components/icons/npm";
 import { buttonVariants } from "@/components/ui/button";
 import {
