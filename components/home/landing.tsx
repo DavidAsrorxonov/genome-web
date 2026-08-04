@@ -25,7 +25,7 @@ export function Landing() {
     <>
       <link
         rel="preload"
-        href="/video/animation.mp4"
+        href="/video/genome-video.mp4"
         as="video"
         type="video/mp4"
         fetchPriority="high"
@@ -50,7 +50,7 @@ export function Landing() {
           className="pointer-events-none absolute left-1/2 top-20 -z-10 size-136 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
         />
 
-        <div className="mx-auto grid w-full max-w-310 items-center gap-14 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:py-28">
+        <div className="mx-auto grid w-full max-w-310 items-center gap-14 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:py-28">
           <div>
             <Badge
               variant="outline"
@@ -144,7 +144,7 @@ export function Landing() {
               preload="auto"
               aria-label="GenomeJS interface animation"
             >
-              <source src="/video/animation1.mp4" type="video/mp4" />
+              <source src="/video/genome-video.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
           </div>
