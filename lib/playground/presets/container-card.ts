@@ -1,5 +1,12 @@
-import { GenomeConfig } from "@genomejs/core";
-import { readContainerWidth, readDensity, readMode } from "./helpers";
+import type { GenomeConfig } from "@genomejs/core";
+
+import type { PlaygroundPreset } from "../types";
+import {
+  createTokenMetadata,
+  readContainerWidth,
+  readDensity,
+  readMode,
+} from "./helpers";
 
 export const containerCardConfig = {
   primitives: {
@@ -72,3 +79,82 @@ export const containerCardConfig = {
     titleSize: (dna) => (dna.containerTier === "wide" ? "1.25rem" : "1rem"),
   },
 } satisfies GenomeConfig;
+
+export const containerCardPreset = {
+  id: "container-card",
+  title: "Container-aware card",
+  shortTitle: "Container",
+  description:
+    "Change card layout, columns, spacing, media proportions, and typography from component width.",
+  concept:
+    "Component tokens respond to their own available space rather than only the viewport.",
+  docsHref: "/docs/guides/container-aware-components",
+
+  config: containerCardConfig,
+
+  initialContext: {
+    mode: "light",
+    contrast: "standard",
+    density: "comfortable",
+    scale: 1,
+    containerWidth: 720,
+  },
+
+  enabledControls: ["mode", "density", "containerWidth"],
+
+  primitiveNames: [
+    "lightSurface",
+    "darkSurface",
+    "lightForeground",
+    "darkForeground",
+    "compactGap",
+    "comfortableGap",
+    "compactPadding",
+    "comfortablePadding",
+  ],
+
+  tokens: [
+    createTokenMetadata("resolvedMode", "Resolved mode", [], ["mode"]),
+    createTokenMetadata(
+      "surface",
+      "Surface",
+      ["lightSurface", "darkSurface"],
+      ["mode"],
+    ),
+    createTokenMetadata(
+      "foreground",
+      "Foreground",
+      ["lightForeground", "darkForeground"],
+      ["mode"],
+    ),
+    createTokenMetadata(
+      "containerTier",
+      "Container tier",
+      [],
+      ["containerWidth"],
+    ),
+    createTokenMetadata("columns", "Columns", ["containerTier"]),
+    createTokenMetadata("cardDirection", "Card direction", ["containerTier"]),
+    createTokenMetadata("gap", "Gap", [
+      "containerTier",
+      "compactGap",
+      "comfortableGap",
+    ]),
+    createTokenMetadata(
+      "padding",
+      "Padding",
+      ["compactPadding", "comfortablePadding"],
+      ["density"],
+    ),
+    createTokenMetadata("mediaRatio", "Media ratio", ["containerTier"]),
+    createTokenMetadata("mediaWidth", "Media width", ["containerTier"]),
+    createTokenMetadata("titleSize", "Title size", ["containerTier"]),
+  ],
+
+  preview: {
+    kind: "container-card",
+    title: "Responsive card collection",
+    description:
+      "Cards that change structure based on the controlled container width.",
+  },
+} satisfies PlaygroundPreset;

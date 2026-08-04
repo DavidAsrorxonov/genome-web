@@ -1,5 +1,13 @@
-import { GenomeConfig, lockContrast } from "@genomejs/core";
-import { readContrast, readDensity, readMode, readScale } from "./helpers";
+import { lockContrast, type GenomeConfig } from "@genomejs/core";
+
+import type { PlaygroundPreset } from "../types";
+import {
+  createTokenMetadata,
+  readContrast,
+  readDensity,
+  readMode,
+  readScale,
+} from "./helpers";
 
 export const themeConfig = {
   primitives: {
@@ -51,3 +59,81 @@ export const themeConfig = {
       readDensity(context) === "compact" ? "36px" : "44px",
   },
 } satisfies GenomeConfig;
+
+export const themePreset = {
+  id: "theme",
+  title: "Light and dark theme",
+  shortTitle: "Theme",
+  description:
+    "Switch semantic colors, spacing, radius, density, and accessible button contrast from runtime context.",
+  concept: "One context mutation updates several related design tokens.",
+  docsHref: "/docs/guides/dark-mode",
+
+  config: themeConfig,
+
+  initialContext: {
+    mode: "light",
+    contrast: "standard",
+    density: "comfortable",
+    scale: 1,
+    containerWidth: 920,
+  },
+
+  enabledControls: ["mode", "contrast", "density", "scale"],
+
+  primitiveNames: [
+    "lightBackground",
+    "darkBackground",
+    "lightSurface",
+    "darkSurface",
+    "lightForeground",
+    "darkForeground",
+    "brand",
+    "baseSpacing",
+    "baseRadius",
+  ],
+
+  tokens: [
+    createTokenMetadata("resolvedMode", "Resolved mode", [], ["mode"]),
+    createTokenMetadata(
+      "background",
+      "Background",
+      ["lightBackground", "darkBackground"],
+      ["mode"],
+    ),
+    createTokenMetadata(
+      "surface",
+      "Surface",
+      ["lightSurface", "darkSurface"],
+      ["mode"],
+    ),
+    createTokenMetadata(
+      "foreground",
+      "Foreground",
+      ["lightForeground", "darkForeground"],
+      ["mode"],
+    ),
+    createTokenMetadata("primary", "Primary", ["brand"]),
+    createTokenMetadata(
+      "primaryForeground",
+      "Primary foreground",
+      ["primary", "surface"],
+      ["contrast"],
+    ),
+    createTokenMetadata("spacing", "Spacing", ["baseSpacing"], ["scale"]),
+    createTokenMetadata(
+      "radius",
+      "Radius",
+      ["baseRadius"],
+      ["scale", "density"],
+    ),
+    createTokenMetadata("controlHeight", "Control height", [], ["density"]),
+  ],
+
+  preview: {
+    kind: "theme",
+    title: "Application surface",
+    description:
+      "A semantic interface theme responding to mode, contrast, density, and scale.",
+  },
+} satisfies PlaygroundPreset;

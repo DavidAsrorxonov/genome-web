@@ -1,5 +1,12 @@
-import { GenomeConfig } from "@genomejs/core";
-import { readDensity, readMode, readScale } from "./helpers";
+import type { GenomeConfig } from "@genomejs/core";
+
+import type { PlaygroundPreset } from "../types";
+import {
+  createTokenMetadata,
+  readDensity,
+  readMode,
+  readScale,
+} from "./helpers";
 
 export const scopedComponentConfig = {
   primitives: {
@@ -59,3 +66,83 @@ export const scopedComponentConfig = {
       `${readMode(context)} / ${readDensity(context)}`,
   },
 } satisfies GenomeConfig;
+
+export const scopedComponentPreset = {
+  id: "scoped-component",
+  title: "Scoped component theme",
+  shortTitle: "Scope",
+  description:
+    "Apply an independent mode, density, spacing scale, and accent to one component subtree.",
+  concept:
+    "A child Genome can express component-local values without changing the application theme.",
+  docsHref: "/docs/guides/scoped-component-themes",
+
+  config: scopedComponentConfig,
+
+  initialContext: {
+    mode: "dark",
+    contrast: "standard",
+    density: "compact",
+    scale: 1,
+    containerWidth: 520,
+  },
+
+  enabledControls: ["mode", "density", "scale"],
+
+  primitiveNames: [
+    "lightSurface",
+    "darkSurface",
+    "lightForeground",
+    "darkForeground",
+    "lightAccent",
+    "darkAccent",
+    "compactSpacing",
+    "comfortableSpacing",
+    "compactRadius",
+    "comfortableRadius",
+  ],
+
+  tokens: [
+    createTokenMetadata("resolvedMode", "Resolved mode", [], ["mode"]),
+    createTokenMetadata(
+      "surface",
+      "Surface",
+      ["lightSurface", "darkSurface"],
+      ["mode"],
+    ),
+    createTokenMetadata(
+      "foreground",
+      "Foreground",
+      ["lightForeground", "darkForeground"],
+      ["mode"],
+    ),
+    createTokenMetadata(
+      "accent",
+      "Accent",
+      ["lightAccent", "darkAccent"],
+      ["mode"],
+    ),
+    createTokenMetadata(
+      "spacing",
+      "Spacing",
+      ["compactSpacing", "comfortableSpacing"],
+      ["density", "scale"],
+    ),
+    createTokenMetadata(
+      "radius",
+      "Radius",
+      ["compactRadius", "comfortableRadius"],
+      ["density", "scale"],
+    ),
+    createTokenMetadata("controlHeight", "Control height", [], ["density"]),
+    createTokenMetadata("border", "Border", [], ["mode"]),
+    createTokenMetadata("scopeLabel", "Scope label", [], ["mode", "density"]),
+  ],
+
+  preview: {
+    kind: "scoped-component",
+    title: "Scoped inspector",
+    description:
+      "A component-local theme that remains isolated from the surrounding website.",
+  },
+} satisfies PlaygroundPreset;

@@ -1,5 +1,12 @@
-import { fluidScale, GenomeConfig } from "@genomejs/core";
-import { readContainerWidth, readDensity, readScale } from "./helpers";
+import { fluidScale, type GenomeConfig } from "@genomejs/core";
+
+import type { PlaygroundPreset } from "../types";
+import {
+  createTokenMetadata,
+  readContainerWidth,
+  readDensity,
+  readScale,
+} from "./helpers";
 
 export const typographyConfig = {
   primitives: {
@@ -78,3 +85,83 @@ export const typographyConfig = {
     },
   },
 } satisfies GenomeConfig;
+
+export const typographyPreset = {
+  id: "typography",
+  title: "Responsive typography",
+  shortTitle: "Typography",
+  description:
+    "Generate fluid type sizes and adjust reading density from scale and available width.",
+  concept:
+    "CSS clamp expressions and runtime preferences can coexist in the same token graph.",
+  docsHref: "/docs/guides/responsive-tokens",
+
+  config: typographyConfig,
+
+  initialContext: {
+    mode: "light",
+    contrast: "standard",
+    density: "comfortable",
+    scale: 1,
+    containerWidth: 760,
+  },
+
+  enabledControls: ["scale", "density", "containerWidth"],
+
+  primitiveNames: [
+    "bodyMin",
+    "bodyMax",
+    "headingMin",
+    "headingMax",
+    "eyebrowMin",
+    "eyebrowMax",
+    "baseSpacing",
+  ],
+
+  tokens: [
+    createTokenMetadata(
+      "bodySize",
+      "Body size",
+      ["bodyMin", "bodyMax"],
+      ["scale"],
+    ),
+    createTokenMetadata(
+      "headingSize",
+      "Heading size",
+      ["headingMin", "headingMax"],
+      ["scale"],
+    ),
+    createTokenMetadata(
+      "eyebrowSize",
+      "Eyebrow size",
+      ["eyebrowMin", "eyebrowMax"],
+      ["scale"],
+    ),
+    createTokenMetadata("lineHeight", "Line height", [], ["density"]),
+    createTokenMetadata(
+      "headingLineHeight",
+      "Heading line height",
+      [],
+      ["density"],
+    ),
+    createTokenMetadata(
+      "paragraphGap",
+      "Paragraph gap",
+      ["baseSpacing"],
+      ["scale", "density"],
+    ),
+    createTokenMetadata(
+      "readingMeasure",
+      "Reading measure",
+      [],
+      ["containerWidth"],
+    ),
+  ],
+
+  preview: {
+    kind: "typography",
+    title: "Editorial article",
+    description:
+      "Fluid heading and body values responding to scale, density, and available width.",
+  },
+} satisfies PlaygroundPreset;
