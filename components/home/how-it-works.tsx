@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { AUTO_STAGE_DELAY_MS, stages } from "./content/how-it-works";
-import { Stage } from "./content/types";
+import type { Stage } from "./content/types";
 
 function StageButton({
   stage,

@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { capabilities, utilities } from "./content/capability-grid";
-import { Capability } from "./content/types";
+import type { Capability } from "./content/types";
 
 function CapabilityCard({ capability }: { capability: Capability }) {
   const Icon = capability.icon;

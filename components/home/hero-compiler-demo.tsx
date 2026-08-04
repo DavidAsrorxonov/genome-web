@@ -186,8 +186,6 @@ export function HeroCompilerDemo() {
 
   const foreground = String(useGenomeTrait(genome, "foreground"));
 
-  const mutedForeground = String(useGenomeTrait(genome, "mutedForeground"));
-
   const buttonColor = String(useGenomeTrait(genome, "buttonColor"));
 
   const buttonText = String(useGenomeTrait(genome, "buttonText"));

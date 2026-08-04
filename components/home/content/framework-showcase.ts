@@ -3,7 +3,7 @@ import { Core as CoreIcon } from "@/components/icons/core";
 import { React as ReactIcon } from "@/components/icons/react";
 import { Svelte as SvelteIcon } from "@/components/icons/svelte";
 import { Vue as VueIcon } from "@/components/icons/vue";
-import { Framework } from "./types";
+import type { Framework } from "./types";
 
 export const frameworks: Framework[] = [
   {

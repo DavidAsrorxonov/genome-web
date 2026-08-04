@@ -13,7 +13,7 @@ import {
 } from "@/lib/genome/framework-demo-genome";
 import { cn } from "@/lib/utils";
 import { frameworks } from "./content/framework-showcase";
-import { Framework, FrameworkId } from "./content/types";
+import type { Framework, FrameworkId } from "./content/types";
 
 function FrameworkCode({ code }: { code: string }) {
   const lines = code.split("\n");

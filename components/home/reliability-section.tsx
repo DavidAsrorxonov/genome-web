@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { safeguards, verificationItems } from "./content/reliability-section";
-import { Safeguard } from "./content/types";
+import type { Safeguard } from "./content/types";
 
 function TerminalHeader({ title }: { title: string }) {
   return (
