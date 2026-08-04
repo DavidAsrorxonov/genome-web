@@ -4,7 +4,16 @@ import {
   getPlaygroundPreset,
   isPlaygroundPresetId,
 } from "./presets";
-import { PlaygroundContext, PlaygroundPresetId } from "./types";
+import {
+  PLAYGROUND_CONTAINER_WIDTH_MAX,
+  PLAYGROUND_CONTAINER_WIDTH_MIN,
+  PLAYGROUND_CONTAINER_WIDTH_STEP,
+  PLAYGROUND_SCALE_MAX,
+  PLAYGROUND_SCALE_MIN,
+  PLAYGROUND_SCALE_STEP,
+  PLAYGROUND_SEARCH_PARAMS,
+} from "./constants";
+import type { PlaygroundContext, PlaygroundPresetId } from "./types";
 // import { URLSearchParams } from "node:url";
 
 export type PlaygroundSearchParams = Record<
@@ -36,6 +45,10 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
+function roundToStep(value: number, step: number): number {
+  return Math.round(value / step) * step;
+}
+
 function parseScale(value: string | null, fallback: number): number {
   if (!value) return fallback;
 
@@ -44,9 +57,9 @@ function parseScale(value: string | null, fallback: number): number {
     return fallback;
   }
 
-  const clamped = clamp(parsed, 0.8, 1.4);
+  const clamped = clamp(parsed, PLAYGROUND_SCALE_MIN, PLAYGROUND_SCALE_MAX);
 
-  return Math.round(clamped * 20) / 20;
+  return roundToStep(clamped, PLAYGROUND_SCALE_STEP);
 }
 
 function parseContainerWidth(value: string | null, fallback: number): number {
@@ -58,9 +71,13 @@ function parseContainerWidth(value: string | null, fallback: number): number {
     return fallback;
   }
 
-  const clamped = clamp(parsed, 280, 1200);
+  const clamped = clamp(
+    parsed,
+    PLAYGROUND_CONTAINER_WIDTH_MIN,
+    PLAYGROUND_CONTAINER_WIDTH_MAX,
+  );
 
-  return Math.round(clamped / 20) * 20;
+  return roundToStep(clamped, PLAYGROUND_CONTAINER_WIDTH_STEP);
 }
 
 function formatScale(scale: number): string {
@@ -70,7 +87,7 @@ function formatScale(scale: number): string {
 export function parsePlaygroundSearchParams(
   input: SearchParamsInput,
 ): PlaygroundUrlState {
-  const requestedPreset = readParameter(input, "preset");
+  const requestedPreset = readParameter(input, PLAYGROUND_SEARCH_PARAMS.preset);
 
   const presetId =
     requestedPreset && isPlaygroundPresetId(requestedPreset)
@@ -83,13 +100,13 @@ export function parsePlaygroundSearchParams(
 
   const enabledControls = new Set(preset.enabledControls);
 
-  const mode = readParameter(input, "mode");
+  const mode = readParameter(input, PLAYGROUND_SEARCH_PARAMS.mode);
 
   if (enabledControls.has("mode") && (mode === "light" || mode === "dark")) {
     context.mode = mode;
   }
 
-  const contrast = readParameter(input, "contrast");
+  const contrast = readParameter(input, PLAYGROUND_SEARCH_PARAMS.contrast);
 
   if (
     enabledControls.has("contrast") &&
@@ -98,7 +115,7 @@ export function parsePlaygroundSearchParams(
     context.contrast = contrast;
   }
 
-  const density = readParameter(input, "density");
+  const density = readParameter(input, PLAYGROUND_SEARCH_PARAMS.density);
 
   if (
     enabledControls.has("density") &&
@@ -108,12 +125,15 @@ export function parsePlaygroundSearchParams(
   }
 
   if (enabledControls.has("scale")) {
-    context.scale = parseScale(readParameter(input, "scale"), context.scale);
+    context.scale = parseScale(
+      readParameter(input, PLAYGROUND_SEARCH_PARAMS.scale),
+      context.scale,
+    );
   }
 
   if (enabledControls.has("containerWidth")) {
     context.containerWidth = parseContainerWidth(
-      readParameter(input, "width"),
+      readParameter(input, PLAYGROUND_SEARCH_PARAMS.containerWidth),
       context.containerWidth,
     );
   }
@@ -133,27 +153,30 @@ export function createPlaygroundSearchParams(
 
   const parameters = new URLSearchParams();
 
-  parameters.set("preset", preset.id);
+  parameters.set(PLAYGROUND_SEARCH_PARAMS.preset, preset.id);
 
   if (enabledControls.has("mode")) {
-    parameters.set("mode", state.context.mode);
+    parameters.set(PLAYGROUND_SEARCH_PARAMS.mode, state.context.mode);
   }
 
   if (enabledControls.has("contrast")) {
-    parameters.set("contrast", state.context.contrast);
+    parameters.set(PLAYGROUND_SEARCH_PARAMS.contrast, state.context.contrast);
   }
 
   if (enabledControls.has("density")) {
-    parameters.set("density", state.context.density);
+    parameters.set(PLAYGROUND_SEARCH_PARAMS.density, state.context.density);
   }
 
   if (enabledControls.has("scale")) {
-    parameters.set("scale", formatScale(state.context.scale));
+    parameters.set(
+      PLAYGROUND_SEARCH_PARAMS.scale,
+      formatScale(state.context.scale),
+    );
   }
 
   if (enabledControls.has("containerWidth")) {
     parameters.set(
-      "width",
+      PLAYGROUND_SEARCH_PARAMS.containerWidth,
       Math.round(state.context.containerWidth).toString(),
     );
   }

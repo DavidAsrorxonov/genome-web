@@ -16,6 +16,12 @@ import type {
   PlaygroundPresetId,
   PlaygroundTokenMetadata,
 } from "./types";
+import {
+  PLAYGROUND_CONTAINER_WIDTH_MAX,
+  PLAYGROUND_CONTAINER_WIDTH_MIN,
+  PLAYGROUND_SCALE_MAX,
+  PLAYGROUND_SCALE_MIN,
+} from "./constants";
 
 function readMode(context: RuntimeContext): PlaygroundMode {
   return context.mode === "dark" ? "dark" : "light";
@@ -36,7 +42,10 @@ function readScale(context: RuntimeContext): number {
     return 1;
   }
 
-  return Math.min(1.4, Math.max(0.8, scale));
+  return Math.min(
+    PLAYGROUND_SCALE_MAX,
+    Math.max(PLAYGROUND_SCALE_MIN, scale),
+  );
 }
 
 function readContainerWidth(context: RuntimeContext): number {
@@ -46,7 +55,10 @@ function readContainerWidth(context: RuntimeContext): number {
     return 720;
   }
 
-  return Math.min(1200, Math.max(280, width));
+  return Math.min(
+    PLAYGROUND_CONTAINER_WIDTH_MAX,
+    Math.max(PLAYGROUND_CONTAINER_WIDTH_MIN, width),
+  );
 }
 
 function createTokenMetadata(

@@ -6,6 +6,15 @@ import { Badge } from "@/components/ui/badge";
 
 import { usePlaygroundController } from "@/components/playground/playground-controller";
 
+import {
+  PLAYGROUND_CONTAINER_WIDTH_MAX,
+  PLAYGROUND_CONTAINER_WIDTH_MIN,
+  PLAYGROUND_CONTAINER_WIDTH_STEP,
+  PLAYGROUND_SCALE_MAX,
+  PLAYGROUND_SCALE_MIN,
+  PLAYGROUND_SCALE_STEP,
+} from "@/lib/playground/constants";
+
 import type { PlaygroundContextKey } from "@/lib/playground/types";
 
 import { cn } from "@/lib/utils";
@@ -190,9 +199,9 @@ export function PlaygroundContextControls() {
 
               <input
                 type="range"
-                min="0.8"
-                max="1.4"
-                step="0.05"
+                min={PLAYGROUND_SCALE_MIN}
+                max={PLAYGROUND_SCALE_MAX}
+                step={PLAYGROUND_SCALE_STEP}
                 value={context.scale}
                 disabled={!runtimeReady}
                 onChange={(event) => {
@@ -206,8 +215,8 @@ export function PlaygroundContextControls() {
               aria-hidden="true"
               className="flex justify-between font-mono text-[10px] text-muted-foreground"
             >
-              <span>0.80×</span>
-              <span>1.40×</span>
+              <span>{PLAYGROUND_SCALE_MIN.toFixed(2)}×</span>
+              <span>{PLAYGROUND_SCALE_MAX.toFixed(2)}×</span>
             </div>
           </ControlGroup>
         ) : null}
@@ -222,9 +231,9 @@ export function PlaygroundContextControls() {
 
               <input
                 type="range"
-                min="280"
-                max="1200"
-                step="20"
+                min={PLAYGROUND_CONTAINER_WIDTH_MIN}
+                max={PLAYGROUND_CONTAINER_WIDTH_MAX}
+                step={PLAYGROUND_CONTAINER_WIDTH_STEP}
                 value={context.containerWidth}
                 disabled={!runtimeReady}
                 onChange={(event) => {
@@ -241,8 +250,8 @@ export function PlaygroundContextControls() {
               aria-hidden="true"
               className="flex justify-between font-mono text-[10px] text-muted-foreground"
             >
-              <span>280px</span>
-              <span>1200px</span>
+              <span>{PLAYGROUND_CONTAINER_WIDTH_MIN}px</span>
+              <span>{PLAYGROUND_CONTAINER_WIDTH_MAX}px</span>
             </div>
           </ControlGroup>
         ) : null}
