@@ -2,22 +2,7 @@ import { ArrowRight, Braces, Check, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-
-const withoutGenome = [
-  "Theme duplication",
-  "Breakpoint duplication",
-  "Manual synchronization",
-  "Runtime condition branching",
-  "Hard-to-track relationships",
-];
-
-const withGenome = [
-  "Declare relationships once",
-  "Keep runtime context explicit",
-  "Discover dependencies automatically",
-  "Output normal CSS custom properties",
-  "Keep framework integration thin",
-];
+import { withGenome, withoutGenome } from "./content/problem-comparison";
 
 function CodeLine({
   number,

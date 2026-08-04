@@ -1,26 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, Braces, Network, Terminal, Zap } from "lucide-react";
+import { ArrowRight, Terminal } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { packages } from "@/constants/packages";
 import { routes } from "@/constants/routes";
 import { cn } from "@/lib/utils";
-
-const highlights = [
-  {
-    icon: Network,
-    label: "Automatic dependency discovery",
-  },
-  {
-    icon: Braces,
-    label: "Safe topological resolution",
-  },
-  {
-    icon: Zap,
-    label: "Diffed CSS variable output",
-  },
-];
+import { highlights } from "./content/landing";
 
 export function Landing() {
   return (
