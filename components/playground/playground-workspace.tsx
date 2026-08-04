@@ -10,6 +10,7 @@ import { PlaygroundOutputPanel } from "@/components/playground/playground-output
 import { PlaygroundPanel } from "@/components/playground/playground-panel";
 import { PlaygroundPresetCatalog } from "@/components/playground/playground-preset-catalog";
 import { cn } from "@/lib/utils";
+import { PlaygroundUrlState } from "@/lib/playground/url-state";
 
 type MobilePanel = "controls" | "preview" | "output";
 
@@ -186,9 +187,15 @@ function PlaygroundWorkspaceContent() {
   );
 }
 
-export function PlaygroundWorkspace() {
+interface PlaygroundWorkspaceProps {
+  initialState: PlaygroundUrlState;
+}
+
+export function PlaygroundWorkspace({
+  initialState,
+}: PlaygroundWorkspaceProps) {
   return (
-    <PlaygroundControllerProvider>
+    <PlaygroundControllerProvider initialState={initialState}>
       <PlaygroundWorkspaceContent />
     </PlaygroundControllerProvider>
   );

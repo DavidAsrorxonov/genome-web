@@ -8,20 +8,31 @@ import {
   useRef,
   useState,
 } from "react";
+
 import type { Genome } from "@genomejs/core";
+
 import {
-  DEFAULT_PLAYGROUND_PRESET_ID,
   clonePlaygroundContext,
   getPlaygroundPreset,
 } from "@/lib/playground/presets";
+
 import {
   diffPlaygroundValues,
   readPlaygroundValues,
 } from "@/lib/playground/compiler-output";
+
 import {
   clearPlaygroundTarget,
   createPlaygroundRuntime,
 } from "@/lib/playground/runtime";
+
+import {
+  createPlaygroundRelativeUrl,
+  parsePlaygroundSearchParams,
+} from "@/lib/playground/url-state";
+
+import type { PlaygroundUrlState } from "@/lib/playground/url-state";
+
 import type {
   PlaygroundContext,
   PlaygroundContextKey,
@@ -29,10 +40,14 @@ import type {
   PlaygroundPresetId,
 } from "@/lib/playground/types";
 
+export type PlaygroundMutationSource = "control" | "reset" | "url";
+
 export interface PlaygroundMutation {
   sequence: number;
 
-  contextKey: PlaygroundContextKey;
+  source: PlaygroundMutationSource;
+
+  contextKey: PlaygroundContextKey | null;
 
   changedTraitNames: readonly string[];
 }
@@ -58,6 +73,8 @@ interface PlaygroundControllerValue {
     key: Key,
     value: PlaygroundContext[Key],
   ) => void;
+
+  resetPreset: () => void;
 }
 
 const PlaygroundControllerContext =
@@ -65,21 +82,46 @@ const PlaygroundControllerContext =
 
 interface PlaygroundControllerProviderProps {
   children: React.ReactNode;
+
+  initialState: PlaygroundUrlState;
+}
+
+function writeBrowserUrl(
+  state: PlaygroundUrlState,
+  mode: "push" | "replace",
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const relativeUrl = createPlaygroundRelativeUrl(
+    state,
+    window.location.pathname,
+  );
+
+  const nextUrl = `${relativeUrl}${window.location.hash}`;
+
+  if (mode === "push") {
+    window.history.pushState(null, "", nextUrl);
+
+    return;
+  }
+
+  window.history.replaceState(null, "", nextUrl);
 }
 
 export function PlaygroundControllerProvider({
   children,
+  initialState,
 }: PlaygroundControllerProviderProps) {
   const [presetId, setPresetId] = useState<PlaygroundPresetId>(
-    DEFAULT_PLAYGROUND_PRESET_ID,
+    initialState.presetId,
   );
 
   const preset = useMemo(() => getPlaygroundPreset(presetId), [presetId]);
 
   const [context, setContext] = useState<PlaygroundContext>(() =>
-    clonePlaygroundContext(
-      getPlaygroundPreset(DEFAULT_PLAYGROUND_PRESET_ID).initialContext,
-    ),
+    clonePlaygroundContext(initialState.context),
   );
 
   const [genome, setGenome] = useState<Genome | null>(null);
@@ -94,6 +136,54 @@ export function PlaygroundControllerProvider({
 
   const mutationSequenceRef = useRef(0);
 
+  const presetIdRef = useRef(presetId);
+
+  const presetRef = useRef(preset);
+
+  const contextRef = useRef(context);
+
+  presetIdRef.current = presetId;
+
+  presetRef.current = preset;
+
+  contextRef.current = context;
+
+  function recordMutation(
+    source: PlaygroundMutationSource,
+
+    contextKey: PlaygroundContextKey | null,
+
+    changedTraitNames: readonly string[],
+  ): void {
+    mutationSequenceRef.current += 1;
+
+    setLastMutation({
+      sequence: mutationSequenceRef.current,
+
+      source,
+      contextKey,
+      changedTraitNames,
+    });
+  }
+
+  function mutateActiveGenome(nextContext: PlaygroundContext): string[] {
+    const activeGenome = runtimeGenomeRef.current;
+
+    if (!activeGenome) {
+      return [];
+    }
+
+    const activePreset = presetRef.current;
+
+    const before = readPlaygroundValues(activeGenome, activePreset);
+
+    activeGenome.mutate(nextContext);
+
+    const after = readPlaygroundValues(activeGenome, activePreset);
+
+    return diffPlaygroundValues(before, after);
+  }
+
   useEffect(() => {
     const target = previewTargetRef.current;
 
@@ -102,6 +192,13 @@ export function PlaygroundControllerProvider({
     }
 
     const runtime = createPlaygroundRuntime(preset, target);
+
+    /*
+     * The selected state may have
+     * come from the URL rather than
+     * the preset defaults.
+     */
+    runtime.genome.mutate(contextRef.current);
 
     runtimeGenomeRef.current = runtime.genome;
 
@@ -116,71 +213,145 @@ export function PlaygroundControllerProvider({
     };
   }, [preset]);
 
+  useEffect(() => {
+    function handlePopState() {
+      const nextState = parsePlaygroundSearchParams(
+        new URLSearchParams(window.location.search),
+      );
+
+      const nextPreset = getPlaygroundPreset(nextState.presetId);
+
+      if (nextState.presetId !== presetIdRef.current) {
+        presetIdRef.current = nextState.presetId;
+
+        presetRef.current = nextPreset;
+
+        contextRef.current = nextState.context;
+
+        setGenome(null);
+        setLastMutation(null);
+
+        setContext(clonePlaygroundContext(nextState.context));
+
+        setPresetId(nextState.presetId);
+
+        return;
+      }
+
+      const changedTraitNames = mutateActiveGenome(nextState.context);
+
+      contextRef.current = nextState.context;
+
+      setContext(clonePlaygroundContext(nextState.context));
+
+      recordMutation("url", null, changedTraitNames);
+    }
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
   function selectPreset(nextPresetId: PlaygroundPresetId): void {
-    if (nextPresetId === presetId) {
+    if (nextPresetId === presetIdRef.current) {
       return;
     }
 
     const nextPreset = getPlaygroundPreset(nextPresetId);
 
+    const nextContext = clonePlaygroundContext(nextPreset.initialContext);
+
+    presetIdRef.current = nextPreset.id;
+
+    presetRef.current = nextPreset;
+
+    contextRef.current = nextContext;
+
     setGenome(null);
     setLastMutation(null);
 
-    setContext(clonePlaygroundContext(nextPreset.initialContext));
+    setContext(nextContext);
 
     setPresetId(nextPreset.id);
+
+    writeBrowserUrl(
+      {
+        presetId: nextPreset.id,
+
+        context: nextContext,
+      },
+      "push",
+    );
   }
 
   function updateContext<Key extends PlaygroundContextKey>(
     key: Key,
     value: PlaygroundContext[Key],
   ): void {
-    const activeGenome = runtimeGenomeRef.current;
-
-    let changedTraitNames: string[] = [];
-
-    if (activeGenome) {
-      const before = readPlaygroundValues(activeGenome, preset);
-
-      activeGenome.mutate({
-        [key]: value,
-      });
-
-      const after = readPlaygroundValues(activeGenome, preset);
-
-      changedTraitNames = diffPlaygroundValues(before, after);
+    if (Object.is(contextRef.current[key], value)) {
+      return;
     }
 
-    setContext((currentContext) => ({
-      ...currentContext,
+    const nextContext = {
+      ...contextRef.current,
       [key]: value,
-    }));
+    };
 
-    mutationSequenceRef.current += 1;
+    const changedTraitNames = mutateActiveGenome(nextContext);
 
-    setLastMutation({
-      sequence: mutationSequenceRef.current,
+    contextRef.current = nextContext;
 
-      contextKey: key,
+    setContext(nextContext);
 
-      changedTraitNames,
-    });
+    recordMutation("control", key, changedTraitNames);
+
+    writeBrowserUrl(
+      {
+        presetId: presetIdRef.current,
+
+        context: nextContext,
+      },
+      "replace",
+    );
   }
 
-  const value = useMemo<PlaygroundControllerValue>(
-    () => ({
-      preset,
-      presetId,
-      context,
-      genome,
-      runtimeReady: genome !== null,
-      lastMutation,
-      previewTargetRef,
-      selectPreset,
-      updateContext,
-    }),
-    [preset, presetId, context, genome, lastMutation],
-  );
+  function resetPreset(): void {
+    const nextContext = clonePlaygroundContext(
+      presetRef.current.initialContext,
+    );
+
+    const changedTraitNames = mutateActiveGenome(nextContext);
+
+    contextRef.current = nextContext;
+
+    setContext(nextContext);
+
+    recordMutation("reset", null, changedTraitNames);
+
+    writeBrowserUrl(
+      {
+        presetId: presetIdRef.current,
+
+        context: nextContext,
+      },
+      "replace",
+    );
+  }
+
+  const value: PlaygroundControllerValue = {
+    preset,
+    presetId,
+    context,
+    genome,
+    runtimeReady: genome !== null,
+    lastMutation,
+    previewTargetRef,
+    selectPreset,
+    updateContext,
+    resetPreset,
+  };
 
   return (
     <PlaygroundControllerContext.Provider value={value}>

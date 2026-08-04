@@ -140,8 +140,14 @@ export function getAffectedTokenNames(
 
 export function createCssOutput(
   traits: readonly PlaygroundResolvedTrait[],
+
+  includedNames?: ReadonlySet<string>,
 ): string {
-  const declarations = traits.map(
+  const includedTraits = includedNames
+    ? traits.filter((trait) => includedNames.has(trait.name))
+    : traits;
+
+  const declarations = includedTraits.map(
     (trait) => `  ${trait.cssVariable}: ${String(trait.value)};`,
   );
 

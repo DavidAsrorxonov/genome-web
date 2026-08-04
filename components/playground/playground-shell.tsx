@@ -1,10 +1,12 @@
 import Link from "next/link";
-
 import { ArrowRight } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
-
 import { PlaygroundWorkspace } from "@/components/playground/playground-workspace";
+import type { PlaygroundUrlState } from "@/lib/playground/url-state";
+
+interface PlaygroundShellProps {
+  initialState: PlaygroundUrlState;
+}
 
 function PlaygroundGridBackground() {
   return (
@@ -27,7 +29,7 @@ function PlaygroundGridBackground() {
   );
 }
 
-export function PlaygroundShell() {
+export function PlaygroundShell({ initialState }: PlaygroundShellProps) {
   return (
     <main className="relative isolate flex-1 overflow-hidden">
       <PlaygroundGridBackground />
@@ -79,7 +81,7 @@ export function PlaygroundShell() {
           aria-label="GenomeJS controlled playground"
           className="min-w-0"
         >
-          <PlaygroundWorkspace />
+          <PlaygroundWorkspace initialState={initialState} />
         </section>
 
         <div className="mt-6 flex flex-col gap-2 border-t pt-5 text-xs leading-5 text-muted-foreground sm:flex-row sm:items-center sm:justify-between">

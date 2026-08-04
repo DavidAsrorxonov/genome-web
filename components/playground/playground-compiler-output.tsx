@@ -15,6 +15,8 @@ import {
 import type { PlaygroundResolvedTrait } from "@/lib/playground/compiler-output";
 import type { PlaygroundPreset } from "@/lib/playground/types";
 import { cn } from "@/lib/utils";
+import { PlaygroundActions } from "@/components/playground/playground-actions";
+import type { PlaygroundContextKey } from "@/lib/playground/types";
 
 function useResolvedTraits(
   genome: Genome,
@@ -280,15 +282,7 @@ function DependencyGraph({
 
   changedNames: ReadonlySet<string>;
 
-  activeContextKey: ReturnType<
-    typeof usePlaygroundController
-  >["lastMutation"] extends infer Mutation
-    ? Mutation extends {
-        contextKey: infer Key;
-      }
-      ? Key | null
-      : null
-    : null;
+  activeContextKey: PlaygroundContextKey | null;
 }) {
   const affectedTokens = useMemo(
     () => getAffectedTokenNames(preset, activeContextKey),
@@ -610,40 +604,44 @@ function CompilerOutputReady({ genome }: { genome: Genome }) {
   );
 
   return (
-    <Tabs defaultValue="dna" className="min-w-0">
-      <TabsList className="grid h-full w-full grid-cols-3 rounded-xl border bg-muted/30 p-1">
-        <TabsTrigger value="dna" className="h-fit gap-1.5 px-2 text-[11px]">
-          <Braces className="size-3.5" aria-hidden="true" />
-          DNA
-        </TabsTrigger>
+    <div className="min-w-0">
+      <PlaygroundActions traits={traits} changedNames={changedNames} />
 
-        <TabsTrigger value="css" className="h-fit gap-1.5 px-2 text-[11px]">
-          <Variable className="size-3.5" aria-hidden="true" />
-          CSS
-        </TabsTrigger>
+      <Tabs defaultValue="dna" className="min-w-0">
+        <TabsList className="grid h-full w-full grid-cols-3 rounded-xl border bg-muted/30 p-1">
+          <TabsTrigger value="dna" className="h-fit gap-1.5 px-2 text-[11px]">
+            <Braces className="size-3.5" aria-hidden="true" />
+            DNA
+          </TabsTrigger>
 
-        <TabsTrigger value="graph" className="h-fit gap-1.5 px-2 text-[11px]">
-          <GitBranch className="size-3.5" aria-hidden="true" />
-          Graph
-        </TabsTrigger>
-      </TabsList>
+          <TabsTrigger value="css" className="h-fit gap-1.5 px-2 text-[11px]">
+            <Variable className="size-3.5" aria-hidden="true" />
+            CSS
+          </TabsTrigger>
 
-      <TabsContent value="dna" className="mt-4">
-        <ResolvedDnaPanel traits={traits} changedNames={changedNames} />
-      </TabsContent>
+          <TabsTrigger value="graph" className="h-fit gap-1.5 px-2 text-[11px]">
+            <GitBranch className="size-3.5" aria-hidden="true" />
+            Graph
+          </TabsTrigger>
+        </TabsList>
 
-      <TabsContent value="css" className="mt-4">
-        <CssVariablesPanel traits={traits} changedNames={changedNames} />
-      </TabsContent>
+        <TabsContent value="dna" className="mt-4">
+          <ResolvedDnaPanel traits={traits} changedNames={changedNames} />
+        </TabsContent>
 
-      <TabsContent value="graph" className="mt-4">
-        <DependencyGraph
-          preset={preset}
-          changedNames={changedNames}
-          activeContextKey={lastMutation?.contextKey ?? null}
-        />
-      </TabsContent>
-    </Tabs>
+        <TabsContent value="css" className="mt-4">
+          <CssVariablesPanel traits={traits} changedNames={changedNames} />
+        </TabsContent>
+
+        <TabsContent value="graph" className="mt-4">
+          <DependencyGraph
+            preset={preset}
+            changedNames={changedNames}
+            activeContextKey={lastMutation?.contextKey ?? null}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
