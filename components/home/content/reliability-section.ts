@@ -1,5 +1,5 @@
 import { CircleAlert, Gauge, GitBranch } from "lucide-react";
-import { Safeguard } from "../reliability-section";
+import { Safeguard } from "./types";
 
 type VerificationItem = {
   label: string;

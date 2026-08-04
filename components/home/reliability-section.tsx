@@ -1,4 +1,3 @@
-import type { ComponentType } from "react";
 import {
   Braces,
   Check,
@@ -10,16 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { safeguards, verificationItems } from "./content/reliability-section";
-
-export type Safeguard = {
-  title: string;
-  description: string;
-  example: string[];
-  icon: ComponentType<{
-    className?: string;
-    "aria-hidden"?: boolean;
-  }>;
-};
+import { Safeguard } from "./content/types";
 
 function TerminalHeader({ title }: { title: string }) {
   return (

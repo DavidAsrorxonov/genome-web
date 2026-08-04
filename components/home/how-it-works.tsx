@@ -5,22 +5,7 @@ import { useEffect, useRef, useState, type ComponentType } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { AUTO_STAGE_DELAY_MS, stages } from "./content/how-it-works";
-
-type StageId = "declare" | "discover" | "resolve" | "express";
-
-export type Stage = {
-  id: StageId;
-  number: string;
-  title: string;
-  summary: string;
-  description: string;
-  icon: ComponentType<{
-    className?: string;
-    "aria-hidden"?: boolean;
-  }>;
-  code: string[];
-  label: string;
-};
+import { Stage } from "./content/types";
 
 function StageButton({
   stage,

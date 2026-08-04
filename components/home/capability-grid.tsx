@@ -1,19 +1,7 @@
-import type { ComponentType } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { capabilities, utilities } from "./content/capability-grid";
-
-export type Capability = {
-  number: string;
-  title: string;
-  description: string;
-  detail: string;
-  icon: ComponentType<{
-    className?: string;
-    "aria-hidden"?: boolean;
-  }>;
-  featured?: boolean;
-};
+import { Capability } from "./content/types";
 
 function CapabilityCard({ capability }: { capability: Capability }) {
   const Icon = capability.icon;

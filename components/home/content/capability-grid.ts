@@ -6,7 +6,7 @@ import {
   Network,
   RefreshCcw,
 } from "lucide-react";
-import { Capability } from "../capability-grid";
+import { Capability } from "./types";
 
 export const capabilities: Capability[] = [
   {

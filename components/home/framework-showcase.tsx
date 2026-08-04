@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ComponentType,
-  type SVGProps,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGenomeTrait } from "@genomejs/react";
 import { ArrowRight, Check, Clipboard, Code2 } from "lucide-react";
 
@@ -19,20 +13,7 @@ import {
 } from "@/lib/genome/framework-demo-genome";
 import { cn } from "@/lib/utils";
 import { frameworks } from "./content/framework-showcase";
-
-type FrameworkId = "core" | "react" | "vue" | "svelte";
-
-export type Framework = {
-  id: FrameworkId;
-  name: string;
-  packageName: string;
-  description: string;
-  installation: string;
-  code: string;
-  docsUrl: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
-  note?: string;
-};
+import { Framework, FrameworkId } from "./content/types";
 
 function FrameworkCode({ code }: { code: string }) {
   const lines = code.split("\n");

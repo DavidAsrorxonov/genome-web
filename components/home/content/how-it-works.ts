@@ -1,5 +1,5 @@
 import { Braces, GitBranch, Search, Variable } from "lucide-react";
-import { Stage } from "../how-it-works";
+import { Stage } from "./types";
 
 export const stages: Stage[] = [
   {
