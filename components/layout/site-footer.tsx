@@ -1,6 +1,6 @@
 import Link from "next/link";
+import Image from "next/image";
 
-import { Logo } from "@/components/brand/logo";
 import { packages } from "@/constants/packages";
 import { routes } from "@/constants/routes";
 import { siteLinks } from "@/constants/site";
@@ -127,20 +127,34 @@ export function SiteFooter() {
   return (
     <footer className="border-t bg-card/30">
       <div className="mx-auto w-full max-w-310 px-4 py-12 sm:px-6 lg:py-16">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_2fr]">
-          <div className="max-w-sm">
+        <div className="grid gap-12 md:grid-cols-[minmax(0,34rem)_1fr] lg:gap-20 xl:gap-28">
+          <div className="min-w-0">
             <Link
               href={routes.home}
               aria-label="GenomeJS homepage"
-              className="inline-flex rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="block w-fit max-w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Logo />
+              <span className="block max-w-full whitespace-nowrap text-[clamp(3.5rem,11vw,5.75rem)] font-semibold leading-none tracking-tighter text-foreground md:text-[clamp(4.25rem,6vw,5.75rem)]">
+                Genome<span className="text-primary">JS</span>
+              </span>
             </Link>
 
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              A reactive design-token compiler for interfaces that respond to
-              runtime context.
-            </p>
+            <div className="mt-5 flex flex-col items-start gap-4">
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                Powered by
+              </p>
+
+              <div className="relative flex size-24 items-center justify-center sm:size-28">
+                <div className="absolute inset-2 rounded-full bg-[#ff6901]/25 blur-2xl" />
+                <Image
+                  src="/images/genome-no-bg.svg"
+                  alt="GenomeJS logo"
+                  width={112}
+                  height={112}
+                  className="relative z-10 size-20 object-contain sm:size-24"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
