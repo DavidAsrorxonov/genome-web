@@ -12,7 +12,7 @@ import { highlights } from "./content/landing";
 import { useCopyToClipboard } from "@/lib/hooks/use-copy";
 
 export function Landing() {
-  const { copyToClipboard, isCopied, error } = useCopyToClipboard(3000);
+  const { copyToClipboard, isCopied } = useCopyToClipboard(3000);
 
   return (
     <>
