@@ -14,6 +14,8 @@ import { packages } from "@/constants/packages";
 import { routes } from "@/constants/routes";
 import { siteLinks } from "@/constants/site";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { Kbd } from "../ui/kbd";
 
 const navigation = [
   {
@@ -113,7 +115,12 @@ export function SiteHeader() {
             <NPM className="size-4" aria-hidden="true" />
           </a>
 
-          <ThemeToggle />
+          <Tooltip>
+            <TooltipTrigger>
+              <ThemeToggle />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">⌘D</TooltipContent>
+          </Tooltip>
 
           <Link
             href={routes.docs}
