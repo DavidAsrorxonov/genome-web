@@ -1,14 +1,19 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight, Terminal } from "lucide-react";
+import { ArrowRight, Terminal, Clipboard, Check } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { packages } from "@/constants/packages";
 import { routes } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 import { highlights } from "./content/landing";
+import { useCopyToClipboard } from "@/lib/hooks/use-copy";
 
 export function Landing() {
+  const { copyToClipboard, isCopied, error } = useCopyToClipboard(3000);
+
   return (
     <>
       <link
@@ -85,18 +90,30 @@ export function Landing() {
               </Link>
             </div>
 
-            <div
-              className="mt-6 flex max-w-md items-center gap-3 rounded-xl border bg-card/80 px-4 py-3 font-mono text-sm shadow-sm backdrop-blur"
-              aria-label="Installation command"
-            >
+            <div className="mx-auto mt-8 flex max-w-xl items-center gap-3 rounded-xl border bg-background px-4 py-3 text-left shadow-sm">
               <Terminal
                 className="size-4 shrink-0 text-primary"
                 aria-hidden="true"
               />
 
-              <code className="overflow-x-auto whitespace-nowrap">
+              <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-sm">
                 {packages.core.install}
               </code>
+
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                onClick={() => copyToClipboard(packages.core.install)}
+                aria-label="Copy installation command"
+                title="Copy installation command"
+              >
+                {isCopied ? (
+                  <Check className="size-4 text-primary" aria-hidden="true" />
+                ) : (
+                  <Clipboard className="size-4" aria-hidden="true" />
+                )}
+              </Button>
             </div>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">

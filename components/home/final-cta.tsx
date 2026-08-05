@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -15,23 +14,10 @@ import { packages } from "@/constants/packages";
 import { routes } from "@/constants/routes";
 import { siteLinks } from "@/constants/site";
 import { cn } from "@/lib/utils";
+import { useCopyToClipboard } from "@/lib/hooks/use-copy";
 
 export function FinalCta() {
-  const [copied, setCopied] = useState(false);
-
-  async function copyInstallationCommand() {
-    try {
-      await navigator.clipboard.writeText(packages.core.install);
-
-      setCopied(true);
-
-      window.setTimeout(() => {
-        setCopied(false);
-      }, 1600);
-    } catch {
-      setCopied(false);
-    }
-  }
+  const { copyToClipboard, isCopied, error } = useCopyToClipboard(3000);
 
   return (
     <section
@@ -101,11 +87,11 @@ export function FinalCta() {
                 type="button"
                 size="icon-sm"
                 variant="ghost"
-                onClick={copyInstallationCommand}
+                onClick={() => copyToClipboard(packages.core.install)}
                 aria-label="Copy installation command"
                 title="Copy installation command"
               >
-                {copied ? (
+                {isCopied ? (
                   <Check className="size-4 text-primary" aria-hidden="true" />
                 ) : (
                   <Clipboard className="size-4" aria-hidden="true" />
@@ -117,7 +103,7 @@ export function FinalCta() {
               className="mt-2 min-h-5 text-xs text-muted-foreground"
               aria-live="polite"
             >
-              {copied
+              {isCopied
                 ? "Installation command copied."
                 : "Install the framework-neutral Core package."}
             </p>
