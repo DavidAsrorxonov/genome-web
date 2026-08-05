@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 type LogoProps = {
   className?: string;
@@ -9,10 +10,11 @@ export function Logo({ className, compact = false }: LogoProps) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       {/* <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-card text-foreground shadow-sm"> */}
-      <img
+      <Image
         src="/images/genome-no-bg.svg"
-        alt="GenomeJS Logo"
-        className="size-10"
+        alt="GenomeJS logo"
+        width={40}
+        height={40}
       />
       {/* </span> */}
 
