@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { RootProvider } from "fumadocs-ui/provider/next";
 
 import "./globals.css";
 import { GenomeProvider } from "@/components/providers/genome-provider";
+import { siteConfig } from "@/lib/site-config";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -18,11 +19,78 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: siteConfig.url,
+  applicationName: siteConfig.name,
   title: {
-    default: "GenomeJS",
-    template: "%s — GenomeJS",
+    default: siteConfig.title,
+    template: `%s | ${siteConfig.name}`,
   },
-  description: "A reactive design-token compiler for frontend interfaces.",
+  description: siteConfig.description,
+  keywords: [...siteConfig.keywords],
+  authors: [
+    {
+      name: siteConfig.creator,
+      url: siteConfig.githubUrl,
+    },
+  ],
+  creator: siteConfig.creator,
+  publisher: siteConfig.name,
+  category: "technology",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: siteConfig.locale,
+    url: "/",
+    siteName: siteConfig.name,
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: siteConfig.title,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: ["/twitter-image"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  colorScheme: "light dark",
+  themeColor: [
+    {
+      media: "(prefers-color-scheme: light)",
+      color: "#ffffff",
+    },
+    {
+      media: "(prefers-color-scheme: dark)",
+      color: "#08090c",
+    },
+  ],
 };
 
 export default function RootLayout({

@@ -11,7 +11,7 @@ export function Logo({ className, compact = false }: LogoProps) {
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       {/* <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-card text-foreground shadow-sm"> */}
       <Image
-        src="/images/genome-no-bg.svg"
+        src="/images/genome-no-bg.png"
         alt="GenomeJS logo"
         width={40}
         height={40}

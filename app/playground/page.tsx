@@ -4,13 +4,14 @@ import { parsePlaygroundSearchParams } from "@/lib/playground/url-state";
 import type { PlaygroundSearchParams } from "@/lib/playground/url-state";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { createMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Playground | GenomeJS",
-
+export const metadata = createMetadata({
+  title: "Playground",
   description:
-    "Manipulate predefined runtime context and inspect how GenomeJS resolves traits and expresses CSS custom properties.",
-};
+    "Manipulate predefined runtime context and inspect the traits, CSS custom properties, and dependency paths resolved by GenomeJS.",
+  path: "/playground",
+});
 
 interface PlaygroundPageProps {
   searchParams: Promise<PlaygroundSearchParams>;

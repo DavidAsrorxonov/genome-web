@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest"
+    "test": "vitest",
+    "analyze": "next experimental-analyze",
+    "analyze:save": "next experimental-analyze --output"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

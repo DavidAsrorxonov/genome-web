@@ -147,7 +147,7 @@ export function SiteFooter() {
               <div className="relative flex size-24 items-center justify-center sm:size-28">
                 <div className="absolute inset-2 rounded-full bg-[#ff6901]/25 blur-2xl" />
                 <Image
-                  src="/images/genome-no-bg.svg"
+                  src="/images/genome-no-bg.png"
                   alt="GenomeJS logo"
                   width={112}
                   height={112}
