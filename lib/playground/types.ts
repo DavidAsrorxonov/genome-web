@@ -1,4 +1,4 @@
-import type { GenomeConfig } from "@genomejs/core";
+import type { GenomeConfig, RuntimeContext } from "@genomejs/core";
 
 export const playgroundModes = ["light", "dark"] as const;
 
@@ -12,7 +12,7 @@ export type PlaygroundContrast = (typeof playgroundContrasts)[number];
 
 export type PlaygroundDensity = (typeof playgroundDensities)[number];
 
-export interface PlaygroundContext {
+interface PlaygroundContextShape {
   mode: PlaygroundMode;
   contrast: PlaygroundContrast;
   density: PlaygroundDensity;
@@ -20,7 +20,11 @@ export interface PlaygroundContext {
   containerWidth: number;
 }
 
-export type PlaygroundContextKey = keyof PlaygroundContext;
+export interface PlaygroundContext
+  extends RuntimeContext,
+    PlaygroundContextShape {}
+
+export type PlaygroundContextKey = keyof PlaygroundContextShape;
 
 export type PlaygroundPresetId =
   | "theme"

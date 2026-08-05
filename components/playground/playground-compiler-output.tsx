@@ -527,7 +527,7 @@ function DependencyGraph({
 
               const highlighted = isActiveContext || isAffectedToken;
 
-              let detail = node.kind;
+              let detail: string = node.kind;
 
               if (isChanged) {
                 detail = "token · changed";
