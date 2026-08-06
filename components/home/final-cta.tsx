@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { useCopyToClipboard } from "@/lib/hooks/use-copy";
 
 export function FinalCta() {
-  const { copyToClipboard, isCopied, error } = useCopyToClipboard(3000);
+  const { copyToClipboard, isCopied } = useCopyToClipboard(3000);
 
   return (
     <section

@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { PlaygroundShell } from "@/components/playground/playground-shell";
 import { parsePlaygroundSearchParams } from "@/lib/playground/url-state";
 import type { PlaygroundSearchParams } from "@/lib/playground/url-state";
