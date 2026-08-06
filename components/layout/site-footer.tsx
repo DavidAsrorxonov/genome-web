@@ -157,12 +157,8 @@ export function SiteFooter() {
 
               <div className="flex max-w-xs flex-col items-start gap-2">
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  And that, gentlemen, is what we call recursion.
+                  And that, gentlemen, is what we call recursion 😉
                 </p>
-
-                <span className="inline-flex rounded-full border border-[#ff6901]/30 bg-[#ff6901]/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-primary shadow-[0_0_24px_rgba(255,105,1,0.18)]">
-                  recursive: true
-                </span>
               </div>
             </div>
           </div>

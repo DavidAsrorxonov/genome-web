@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CircleQuestionMark } from "lucide-react";
 
 import { GitHub } from "@/components/icons/github";
 import { Logo } from "@/components/brand/logo";
@@ -15,7 +15,6 @@ import { routes } from "@/constants/routes";
 import { siteLinks } from "@/constants/site";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { Kbd } from "../ui/kbd";
 
 const navigation = [
   {
@@ -114,13 +113,7 @@ export function SiteHeader() {
           >
             <NPM className="size-4" aria-hidden="true" />
           </a>
-
-          <Tooltip>
-            <TooltipTrigger>
-              <ThemeToggle />
-            </TooltipTrigger>
-            <TooltipContent side="bottom">⌘D</TooltipContent>
-          </Tooltip>
+          <ThemeToggle />
 
           <Link
             href={routes.docs}
@@ -135,6 +128,17 @@ export function SiteHeader() {
             <ArrowRight data-icon="inline-end" aria-hidden="true" />
           </Link>
 
+          <Tooltip>
+            <TooltipTrigger>
+              <CircleQuestionMark
+                size={15}
+                className="ml-1 hidden lg:inline-flex"
+                data-icon="inline-end"
+                aria-hidden="true"
+              />
+            </TooltipTrigger>
+            <TooltipContent>⌘D - Theme Toggle</TooltipContent>
+          </Tooltip>
           <MobileNavigation />
         </div>
       </div>
