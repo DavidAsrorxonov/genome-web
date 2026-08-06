@@ -13,6 +13,7 @@ import type { PlaygroundResolvedTrait } from "@/lib/playground/compiler-output";
 import { createPlaygroundRelativeUrl } from "@/lib/playground/url-state";
 
 import { cn } from "@/lib/utils";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface PlaygroundActionsProps {
   traits: readonly PlaygroundResolvedTrait[];
@@ -135,6 +136,10 @@ export function PlaygroundActions({
 
       await copyText(absoluteUrl.toString());
 
+      trackAnalyticsEvent("Playground State Shared", {
+        preset: presetId,
+      });
+
       showStatus("shared");
     } catch {
       showStatus("error");
@@ -145,6 +150,11 @@ export function PlaygroundActions({
     try {
       await copyText(createCssOutput(traits));
 
+      trackAnalyticsEvent("Playground CSS Copied", {
+        preset: presetId,
+        scope: "all",
+      });
+
       showStatus("all-copied");
     } catch {
       showStatus("error");
@@ -154,6 +164,11 @@ export function PlaygroundActions({
   async function handleCopyChanged(): Promise<void> {
     try {
       await copyText(createCssOutput(traits, changedNames));
+
+      trackAnalyticsEvent("Playground CSS Copied", {
+        preset: presetId,
+        scope: "changed",
+      });
 
       showStatus("changed-copied");
     } catch {

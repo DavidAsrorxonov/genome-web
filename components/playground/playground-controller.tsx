@@ -39,6 +39,7 @@ import type {
   PlaygroundPreset,
   PlaygroundPresetId,
 } from "@/lib/playground/types";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 export type PlaygroundMutationSource = "control" | "reset" | "url";
 
@@ -284,6 +285,10 @@ export function PlaygroundControllerProvider({
       },
       "push",
     );
+
+    trackAnalyticsEvent("Playground Preset Selected", {
+      preset: nextPreset.id,
+    });
   }
 
   function updateContext<Key extends PlaygroundContextKey>(

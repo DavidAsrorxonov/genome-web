@@ -6,6 +6,7 @@ import "./globals.css";
 import { GenomeProvider } from "@/components/providers/genome-provider";
 import { siteConfig } from "@/lib/site-config";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SiteAnalytics } from "@/components/analytics/site-analytics";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -108,7 +109,10 @@ export default function RootLayout({
       <body className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
         <RootProvider>
           <GenomeProvider>
-            <TooltipProvider>{children}</TooltipProvider>
+            <TooltipProvider>
+              {children}
+              <SiteAnalytics />
+            </TooltipProvider>
           </GenomeProvider>
         </RootProvider>
       </body>
