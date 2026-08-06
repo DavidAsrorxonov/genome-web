@@ -46,7 +46,7 @@ function clamp(value: number, minimum: number, maximum: number): number {
 }
 
 function roundToStep(value: number, step: number): number {
-  return Math.round(value / step) * step;
+  return Number((Math.round(value / step) * step).toFixed(2));
 }
 
 function parseScale(value: string | null, fallback: number): number {
