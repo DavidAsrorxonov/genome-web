@@ -7,8 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
-  useState,
+  useSyncExternalStore,
 } from "react";
 import { useTheme } from "next-themes";
 
@@ -31,26 +30,99 @@ type GenomeContextValue = {
   setSpacingScale: (value: number) => void;
 };
 
+type GenomeSnapshot = {
+  genome: Genome | null;
+  context: SiteGenomeContext;
+};
+
 const GenomeContext = createContext<GenomeContextValue | null>(null);
+
+const initialGenomeSnapshot: GenomeSnapshot = {
+  genome: null,
+  context: initialSiteContext,
+};
+
+function createGenomeStore() {
+  let snapshot = initialGenomeSnapshot;
+
+  const listeners = new Set<() => void>();
+
+  function emit(): void {
+    for (const listener of listeners) {
+      listener();
+    }
+  }
+
+  return {
+    subscribe(listener: () => void): () => void {
+      listeners.add(listener);
+
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+
+    getSnapshot(): GenomeSnapshot {
+      return snapshot;
+    },
+
+    initialize(target: HTMLElement, context: SiteGenomeContext): Genome {
+      const genome = createSiteGenome(target, context);
+
+      snapshot = {
+        genome,
+        context,
+      };
+
+      emit();
+
+      return genome;
+    },
+
+    clear(genome: Genome): void {
+      if (snapshot.genome !== genome) {
+        return;
+      }
+
+      snapshot = {
+        ...snapshot,
+        genome: null,
+      };
+
+      emit();
+    },
+
+    applyPatch(patch: Partial<SiteGenomeContext>): void {
+      snapshot.genome?.mutate({
+        ...patch,
+      });
+
+      snapshot = {
+        ...snapshot,
+        context: {
+          ...snapshot.context,
+          ...patch,
+        },
+      };
+
+      emit();
+    },
+  };
+}
+
+const genomeStore = createGenomeStore();
 
 export function GenomeProvider({ children }: { children: React.ReactNode }) {
   const { resolvedTheme, setTheme } = useTheme();
 
-  const genomeRef = useRef<Genome | null>(null);
-
-  const [genome, setGenome] = useState<Genome | null>(null);
-
-  const [context, setContext] = useState<SiteGenomeContext>(initialSiteContext);
+  const { genome, context } = useSyncExternalStore(
+    genomeStore.subscribe,
+    genomeStore.getSnapshot,
+    genomeStore.getSnapshot,
+  );
 
   const applyPatch = useCallback((patch: Partial<SiteGenomeContext>) => {
-    genomeRef.current?.mutate({
-      ...patch,
-    });
-
-    setContext((current) => ({
-      ...current,
-      ...patch,
-    }));
+    genomeStore.applyPatch(patch);
   }, []);
 
   useEffect(() => {
@@ -63,17 +135,13 @@ export function GenomeProvider({ children }: { children: React.ReactNode }) {
       mode,
     };
 
-    const liveGenome = createSiteGenome(
+    const liveGenome = genomeStore.initialize(
       document.documentElement,
       initialContext,
     );
 
-    genomeRef.current = liveGenome;
-    setGenome(liveGenome);
-    setContext(initialContext);
-
     return () => {
-      genomeRef.current = null;
+      genomeStore.clear(liveGenome);
     };
   }, []);
 

@@ -143,11 +143,23 @@ export function PlaygroundControllerProvider({
 
   const contextRef = useRef(context);
 
-  presetIdRef.current = presetId;
+  function commitRefs(
+    nextPresetId: PlaygroundPresetId,
 
-  presetRef.current = preset;
+    nextPreset: PlaygroundPreset,
 
-  contextRef.current = context;
+    nextContext: PlaygroundContext,
+  ): void {
+    presetIdRef.current = nextPresetId;
+
+    presetRef.current = nextPreset;
+
+    contextRef.current = nextContext;
+  }
+
+  function commitContextRef(nextContext: PlaygroundContext): void {
+    contextRef.current = nextContext;
+  }
 
   function recordMutation(
     source: PlaygroundMutationSource,
@@ -223,11 +235,7 @@ export function PlaygroundControllerProvider({
       const nextPreset = getPlaygroundPreset(nextState.presetId);
 
       if (nextState.presetId !== presetIdRef.current) {
-        presetIdRef.current = nextState.presetId;
-
-        presetRef.current = nextPreset;
-
-        contextRef.current = nextState.context;
+        commitRefs(nextState.presetId, nextPreset, nextState.context);
 
         setGenome(null);
         setLastMutation(null);
@@ -241,7 +249,7 @@ export function PlaygroundControllerProvider({
 
       const changedTraitNames = mutateActiveGenome(nextState.context);
 
-      contextRef.current = nextState.context;
+      commitContextRef(nextState.context);
 
       setContext(clonePlaygroundContext(nextState.context));
 
@@ -264,11 +272,7 @@ export function PlaygroundControllerProvider({
 
     const nextContext = clonePlaygroundContext(nextPreset.initialContext);
 
-    presetIdRef.current = nextPreset.id;
-
-    presetRef.current = nextPreset;
-
-    contextRef.current = nextContext;
+    commitRefs(nextPreset.id, nextPreset, nextContext);
 
     setGenome(null);
     setLastMutation(null);
@@ -306,7 +310,7 @@ export function PlaygroundControllerProvider({
 
     const changedTraitNames = mutateActiveGenome(nextContext);
 
-    contextRef.current = nextContext;
+    commitContextRef(nextContext);
 
     setContext(nextContext);
 
@@ -329,7 +333,7 @@ export function PlaygroundControllerProvider({
 
     const changedTraitNames = mutateActiveGenome(nextContext);
 
-    contextRef.current = nextContext;
+    commitContextRef(nextContext);
 
     setContext(nextContext);
 
