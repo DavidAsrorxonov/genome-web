@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { Copy, ExternalLink, FileText, Terminal } from "lucide-react";
+import { ExternalLink, FileText, Terminal } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { AgentActionsMenu } from "@/components/home/agent-actions-menu";
 import { packages } from "@/constants/packages";
 import { routes } from "@/constants/routes";
 import { siteConfig } from "@/lib/site-config";
 import { source } from "@/lib/source";
-import { cn } from "@/lib/utils";
 
 type AgentLink = {
   label: string;
@@ -65,24 +64,14 @@ function AgentSection({
 
 export function AgentHome() {
   const agentLinks = createAgentLinks();
+  const llmsPath = "/llms.txt";
+  const llmsUrl = absoluteUrl(llmsPath);
 
   return (
     <main className="min-h-screen bg-[#101010] text-foreground">
       <section className="mx-auto w-full max-w-310 px-4 py-18 sm:px-6 lg:py-24">
         <div className="flex justify-end">
-          <Link
-            href="/llms.txt"
-            className={cn(
-              buttonVariants({
-                variant: "outline",
-                size: "sm",
-              }),
-              "bg-background/60 font-mono",
-            )}
-          >
-            <Copy className="size-3.5" aria-hidden="true" />
-            Open llms.txt
-          </Link>
+          <AgentActionsMenu llmsPath={llmsPath} llmsUrl={llmsUrl} />
         </div>
 
         <article className="mx-auto mt-10 max-w-5xl font-mono">
@@ -92,7 +81,7 @@ title: GenomeJS Machine-Readable Overview
 description: Reactive design-token compiler for runtime-aware interfaces.
 canonical: ${siteConfig.url.origin}
 human_url: ${siteConfig.url.origin}
-llms_url: ${absoluteUrl("/llms.txt")}
+llms_url: ${llmsUrl}
 docs_url: ${absoluteUrl(routes.docs)}
 playground_url: ${absoluteUrl(routes.playground)}
 ---`}</code>
