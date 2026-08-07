@@ -137,7 +137,10 @@ export function SiteHeader() {
                 aria-hidden="true"
               />
             </TooltipTrigger>
-            <TooltipContent>⌘D - Theme Toggle</TooltipContent>
+            <TooltipContent>
+              <span className="bg-card/30 px-2 py-1 font-mono">D</span> - Theme
+              Toggle
+            </TooltipContent>
           </Tooltip>
           <MobileNavigation />
         </div>
